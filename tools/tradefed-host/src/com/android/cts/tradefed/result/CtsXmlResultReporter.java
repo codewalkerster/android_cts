@@ -58,7 +58,7 @@ public class CtsXmlResultReporter implements ITestInvocationListener {
     private static final String LOG_TAG = "CtsXmlResultReporter";
 
     static final String TEST_RESULT_FILE_NAME = "testResult.xml";
-    private static final String CTS_RESULT_FILE_VERSION = "1.13";
+    private static final String CTS_RESULT_FILE_VERSION = "1.14";
     private static final String[] CTS_RESULT_RESOURCES = {"cts_result.xsl", "cts_result.css",
         "logo.gif", "newrule-green.png"};
 
@@ -97,10 +97,10 @@ public class CtsXmlResultReporter implements ITestInvocationListener {
     private boolean mIsDeviceInfoRun = false;
     private ResultReporter mReporter;
     private File mLogDir;
+    private String mSuiteName;
 
-    private static final String PTS_PERFORMANCE_EXCEPTION = "com.android.pts.util.PtsException";
-    private static final Pattern mPtsLogPattern = Pattern.compile(
-            "com\\.android\\.pts\\.util\\.PtsException:\\s(.*)\\+\\+\\+\\+(.*)");
+    private static final Pattern mPtsLogPattern = Pattern.compile("(.*)\\+\\+\\+\\+(.*)");
+
     public void setReportDir(File reportDir) {
         mReportDir = reportDir;
     }
@@ -134,21 +134,52 @@ public class CtsXmlResultReporter implements ITestInvocationListener {
             if (mReportDir == null) {
                 mReportDir = ctsBuildHelper.getResultsDir();
             }
-            // create a unique directory for saving results, using old cts host convention
-            // TODO: in future, consider using LogFileSaver to create build-specific directories
-            mReportDir = new File(mReportDir, TimeUtil.getResultTimestamp());
-            mReportDir.mkdirs();
+            mReportDir = createUniqueReportDir(mReportDir);
+
             mStartTime = getTimestamp();
             logResult("Created result dir %s", mReportDir.getName());
         }
-
-        mReporter = new ResultReporter(mResultServer, ctsBuildHelper.getSuiteName());
+        mSuiteName = ctsBuildHelper.getSuiteName();
+        mReporter = new ResultReporter(mResultServer, mSuiteName);
 
         // TODO: allow customization of log dir
         // create a unique directory for saving logs, with same name as result dir
         File rootLogDir = getBuildHelper(ctsBuild).getLogsDir();
         mLogDir = new File(rootLogDir, mReportDir.getName());
         mLogDir.mkdirs();
+    }
+
+    /**
+     * Create a unique directory for saving results.
+     * <p/>
+     * Currently using legacy CTS host convention of timestamp directory names. In case of
+     * collisions, will use {@link FileUtil} to generate unique file name.
+     * <p/>
+     * TODO: in future, consider using LogFileSaver to create build-specific directories
+     *
+     * @param parentDir the parent folder to create dir in
+     * @return the created directory
+     */
+    private static synchronized File createUniqueReportDir(File parentDir) {
+        // TODO: in future, consider using LogFileSaver to create build-specific directories
+
+        File reportDir = new File(parentDir, TimeUtil.getResultTimestamp());
+        if (reportDir.exists()) {
+            // directory with this timestamp exists already! Choose a unique, although uglier, name
+            try {
+                reportDir = FileUtil.createTempDir(TimeUtil.getResultTimestamp() + "_", parentDir);
+            } catch (IOException e) {
+                CLog.e(e);
+                CLog.e("Failed to create result directory %s", reportDir.getAbsolutePath());
+            }
+        } else {
+            if (!reportDir.mkdirs()) {
+                // TODO: consider throwing an exception
+                CLog.e("mkdirs failed when attempting to create result directory %s",
+                        reportDir.getAbsolutePath());
+            }
+        }
+        return reportDir;
     }
 
     /**
@@ -225,21 +256,7 @@ public class CtsXmlResultReporter implements ITestInvocationListener {
      */
     @Override
     public void testFailed(TestFailure status, TestIdentifier test, String trace) {
-        if (trace.startsWith(PTS_PERFORMANCE_EXCEPTION)) { //PTS result
-            Test tst = mCurrentPkgResult.findTest(test);
-            // this exception is always thrown as exception is thrown from tearDown.
-            // Just ignore it.
-            if (tst.getName().endsWith("testAndroidTestCaseSetupProperly")) {
-                return;
-            }
-            Matcher m = mPtsLogPattern.matcher(trace);
-            if (m.find()) {
-                mCurrentPkgResult.reportPerformanceResult(test, CtsTestStatus.PASS, m.group(1),
-                        m.group(2));
-            }
-        } else {
-            mCurrentPkgResult.reportTestFailure(test, CtsTestStatus.FAIL, trace);
-        }
+        mCurrentPkgResult.reportTestFailure(test, CtsTestStatus.FAIL, trace);
     }
 
     /**
@@ -247,11 +264,37 @@ public class CtsXmlResultReporter implements ITestInvocationListener {
      */
     @Override
     public void testEnded(TestIdentifier test, Map<String, String> testMetrics) {
+        collectPtsResults(test, testMetrics);
         mCurrentPkgResult.reportTestEnded(test);
         Test result = mCurrentPkgResult.findTest(test);
         String stack = result.getStackTrace() == null ? "" : "\n" + result.getStackTrace();
         logResult("%s#%s %s %s", test.getClassName(), test.getTestName(), result.getResult(),
                 stack);
+    }
+
+    /**
+     * Collect Pts results for both device and host tests to the package result.
+     * @param test test ran
+     * @param testMetrics test metrics which can contain performance result for device tests
+     */
+    private void collectPtsResults(TestIdentifier test, Map<String, String> testMetrics) {
+        // device test can have performance results in testMetrics
+        String perfResult = PtsReportUtil.getPtsResultFromMetrics(testMetrics);
+        // host test should be checked in PtsHostStore.
+        if (perfResult == null) {
+            perfResult = PtsHostStore.removePtsResult(mDeviceSerial, test);
+        }
+        if (perfResult != null) {
+            // PTS result is passed in Summary++++Details format.
+            // Extract Summary and Details, and pass them.
+            Matcher m = mPtsLogPattern.matcher(perfResult);
+            if (m.find()) {
+                mCurrentPkgResult.reportPerformanceResult(test, CtsTestStatus.PASS, m.group(1),
+                        m.group(2));
+            } else {
+                logResult("PTS Result unrecognizable:" + perfResult);
+            }
+        }
     }
 
     /**
@@ -358,6 +401,7 @@ public class CtsXmlResultReporter implements ITestInvocationListener {
         serializer.attribute(ns, STARTTIME_ATTR, startTime);
         serializer.attribute(ns, "endtime", endTime);
         serializer.attribute(ns, "version", CTS_RESULT_FILE_VERSION);
+        serializer.attribute(ns, "suite", mSuiteName);
 
         mResults.serialize(serializer);
         // TODO: not sure why, but the serializer doesn't like this statement

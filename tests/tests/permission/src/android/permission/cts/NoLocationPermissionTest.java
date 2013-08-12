@@ -16,8 +16,6 @@
 
 package android.permission.cts;
 
-import java.util.List;
-
 import android.app.PendingIntent;
 import android.content.Context;
 import android.content.Intent;
@@ -30,6 +28,8 @@ import android.telephony.PhoneStateListener;
 import android.telephony.TelephonyManager;
 import android.test.AndroidTestCase;
 import android.test.suitebuilder.annotation.SmallTest;
+
+import java.util.List;
 
 /**
  * Verify the location access without specific permissions.
@@ -57,13 +57,14 @@ public class NoLocationPermissionTest extends AndroidTestCase {
 
     /**
      * Verify that listen or get cell location requires permissions.
-     * <p>Requires Permission:
-     *   {@link android.Manifest.permission#ACCESS_COARSE_LOCATION.}
+     * <p>
+     * Requires Permission: {@link
+     * android.Manifest.permission#ACCESS_COARSE_LOCATION.}
      */
     @SmallTest
     public void testListenCellLocation() {
         TelephonyManager telephonyManager = (TelephonyManager) getContext().getSystemService(
-                   Context.TELEPHONY_SERVICE);
+                Context.TELEPHONY_SERVICE);
         PhoneStateListener phoneStateListener = new PhoneStateListener();
         try {
             telephonyManager.listen(phoneStateListener, PhoneStateListener.LISTEN_CELL_LOCATION);
@@ -82,13 +83,40 @@ public class NoLocationPermissionTest extends AndroidTestCase {
     }
 
     /**
+     * Verify that get cell location requires permissions.
+     * <p>
+     * Requires Permission: {@link
+     * android.Manifest.permission#ACCESS_COARSE_LOCATION.}
+     */
+    @SmallTest
+    public void testListenCellLocation2() {
+        TelephonyManager telephonyManager = (TelephonyManager) getContext().getSystemService(
+                Context.TELEPHONY_SERVICE);
+        PhoneStateListener phoneStateListener = new PhoneStateListener();
+
+        try {
+            telephonyManager.getNeighboringCellInfo();
+            fail("TelephonyManager.getNeighbouringCellInfo did not throw SecurityException as expected");
+        } catch (SecurityException e) {
+            // expected
+        }
+
+        try {
+            telephonyManager.getAllCellInfo();
+            fail("TelephonyManager.getAllCellInfo did not throw SecurityException as expected");
+        } catch (SecurityException e) {
+            // expected
+        }
+    }
+
+    /**
      * Helper method to verify that calling requestLocationUpdates with given
      * provider throws SecurityException.
-     *
+     * 
      * @param provider the String provider name.
      */
     private void checkRequestLocationUpdates(String provider) {
-        if ( !isKnownLocationProvider(provider) ) {
+        if (!isKnownLocationProvider(provider)) {
             // skip this test if the provider is unknown
             return;
         }
@@ -114,8 +142,9 @@ public class NoLocationPermissionTest extends AndroidTestCase {
 
     /**
      * Verify that listening for network requires permissions.
-     * <p>Requires Permission:
-     *   {@link android.Manifest.permission#ACCESS_FINE_LOCATION}.
+     * <p>
+     * Requires Permission:
+     * {@link android.Manifest.permission#ACCESS_FINE_LOCATION}.
      */
     @SmallTest
     public void testRequestLocationUpdatesNetwork() {
@@ -124,8 +153,9 @@ public class NoLocationPermissionTest extends AndroidTestCase {
 
     /**
      * Verify that listening for GPS location requires permissions.
-     * <p>Requires Permission:
-     *   {@link android.Manifest.permission#ACCESS_FINE_LOCATION}.
+     * <p>
+     * Requires Permission:
+     * {@link android.Manifest.permission#ACCESS_FINE_LOCATION}.
      */
     @SmallTest
     public void testRequestLocationUpdatesGps() {
@@ -134,8 +164,9 @@ public class NoLocationPermissionTest extends AndroidTestCase {
 
     /**
      * Verify that adding a proximity alert requires permissions.
-     * <p>Requires Permission:
-     *   {@link android.Manifest.permission#ACCESS_FINE_LOCATION}.
+     * <p>
+     * Requires Permission:
+     * {@link android.Manifest.permission#ACCESS_FINE_LOCATION}.
      */
     @SmallTest
     public void testAddProximityAlert() {
@@ -152,11 +183,11 @@ public class NoLocationPermissionTest extends AndroidTestCase {
     /**
      * Helper method to verify that calling getLastKnownLocation with given
      * provider throws SecurityException.
-     *
+     * 
      * @param provider the String provider name.
      */
     private void checkGetLastKnownLocation(String provider) {
-        if ( !isKnownLocationProvider(provider) ) {
+        if (!isKnownLocationProvider(provider)) {
             // skip this test if the provider is unknown
             return;
         }
@@ -172,8 +203,9 @@ public class NoLocationPermissionTest extends AndroidTestCase {
 
     /**
      * Verify that getting the last known GPS location requires permissions.
-     * <p>Requires Permission:
-     *   {@link android.Manifest.permission#ACCESS_FINE_LOCATION}.
+     * <p>
+     * Requires Permission:
+     * {@link android.Manifest.permission#ACCESS_FINE_LOCATION}.
      */
     @SmallTest
     public void testGetLastKnownLocationGps() {
@@ -182,8 +214,9 @@ public class NoLocationPermissionTest extends AndroidTestCase {
 
     /**
      * Verify that getting the last known network location requires permissions.
-     * <p>Requires Permission:
-     *   {@link android.Manifest.permission#ACCESS_FINE_LOCATION}.
+     * <p>
+     * Requires Permission:
+     * {@link android.Manifest.permission#ACCESS_FINE_LOCATION}.
      */
     @SmallTest
     public void testGetLastKnownLocationNetwork() {
@@ -193,11 +226,11 @@ public class NoLocationPermissionTest extends AndroidTestCase {
     /**
      * Helper method to verify that calling getProvider with given provider
      * throws SecurityException.
-     *
+     * 
      * @param provider the String provider name.
      */
     private void checkGetProvider(String provider) {
-        if ( !isKnownLocationProvider(provider) ) {
+        if (!isKnownLocationProvider(provider)) {
             // skip this test if the provider is unknown
             return;
         }
@@ -212,8 +245,9 @@ public class NoLocationPermissionTest extends AndroidTestCase {
 
     /**
      * Verify that getting the GPS provider requires permissions.
-     * <p>Requires Permission:
-     *   {@link android.Manifest.permission#ACCESS_FINE_LOCATION}.
+     * <p>
+     * Requires Permission:
+     * {@link android.Manifest.permission#ACCESS_FINE_LOCATION}.
      */
     @SmallTest
     public void testGetProviderGps() {
@@ -222,11 +256,13 @@ public class NoLocationPermissionTest extends AndroidTestCase {
 
     /**
      * Verify that getting the network provider requires permissions.
-     * <p>Requires Permission:
-     *   {@link android.Manifest.permission#ACCESS_COARSE_LOCATION}.
+     * <p>
+     * Requires Permission:
+     * {@link android.Manifest.permission#ACCESS_COARSE_LOCATION}.
      */
-    // TODO: remove from small test suite until network provider can be enabled on test devices
-    //@SmallTest
+    // TODO: remove from small test suite until network provider can be enabled
+    // on test devices
+    // @SmallTest
     public void testGetProviderNetwork() {
         checkGetProvider(LocationManager.NETWORK_PROVIDER);
     }
@@ -234,11 +270,11 @@ public class NoLocationPermissionTest extends AndroidTestCase {
     /**
      * Helper method to verify that calling isProviderEnabled with given
      * provider throws SecurityException.
-     *
+     * 
      * @param provider the String provider name.
      */
     private void checkIsProviderEnabled(String provider) {
-        if ( !isKnownLocationProvider(provider) ) {
+        if (!isKnownLocationProvider(provider)) {
             // skip this test if the provider is unknown
             return;
         }
@@ -253,8 +289,9 @@ public class NoLocationPermissionTest extends AndroidTestCase {
 
     /**
      * Verify that checking IsProviderEnabled for GPS requires permissions.
-     * <p>Requires Permission:
-     *   {@link android.Manifest.permission#ACCESS_FINE_LOCATION}.
+     * <p>
+     * Requires Permission:
+     * {@link android.Manifest.permission#ACCESS_FINE_LOCATION}.
      */
     @SmallTest
     public void testIsProviderEnabledGps() {
@@ -263,8 +300,9 @@ public class NoLocationPermissionTest extends AndroidTestCase {
 
     /**
      * Verify that checking IsProviderEnabled for network requires permissions.
-     * <p>Requires Permission:
-     *   {@link android.Manifest.permission#ACCESS_FINE_LOCATION}.
+     * <p>
+     * Requires Permission:
+     * {@link android.Manifest.permission#ACCESS_FINE_LOCATION}.
      */
     @SmallTest
     public void testIsProviderEnabledNetwork() {
@@ -273,8 +311,9 @@ public class NoLocationPermissionTest extends AndroidTestCase {
 
     /**
      * Verify that checking addTestProvider for network requires permissions.
-     * <p>Requires Permission:
-     *   {@link android.Manifest.permission#ACCESS_MOCK_LOCATION}.
+     * <p>
+     * Requires Permission:
+     * {@link android.Manifest.permission#ACCESS_MOCK_LOCATION}.
      */
     @SmallTest
     public void testAddTestProvider() {
@@ -286,13 +325,15 @@ public class NoLocationPermissionTest extends AndroidTestCase {
                     true, true, true, TEST_POWER_REQUIREMENT_VALE, TEST_ACCURACY_VALUE);
             fail("LocationManager.addTestProvider did not throw SecurityException as expected");
         } catch (SecurityException e) {
+            // expected
         }
     }
 
     /**
      * Verify that checking removeTestProvider for network requires permissions.
-     * <p>Requires Permission:
-     *   {@link android.Manifest.permission#ACCESS_MOCK_LOCATION}.
+     * <p>
+     * Requires Permission:
+     * {@link android.Manifest.permission#ACCESS_MOCK_LOCATION}.
      */
     @SmallTest
     public void testRemoveTestProvider() {
@@ -301,13 +342,16 @@ public class NoLocationPermissionTest extends AndroidTestCase {
             fail("LocationManager.removeTestProvider did not throw SecurityException as"
                     + " expected");
         } catch (SecurityException e) {
+            // expected
         }
     }
 
     /**
-     * Verify that checking setTestProviderLocation for network requires permissions.
-     * <p>Requires Permission:
-     *   {@link android.Manifest.permission#ACCESS_MOCK_LOCATION}.
+     * Verify that checking setTestProviderLocation for network requires
+     * permissions.
+     * <p>
+     * Requires Permission:
+     * {@link android.Manifest.permission#ACCESS_MOCK_LOCATION}.
      */
     @SmallTest
     public void testSetTestProviderLocation() {
@@ -319,13 +363,16 @@ public class NoLocationPermissionTest extends AndroidTestCase {
             fail("LocationManager.setTestProviderLocation did not throw SecurityException as"
                     + " expected");
         } catch (SecurityException e) {
+            // expected
         }
     }
 
     /**
-     * Verify that checking clearTestProviderLocation for network requires permissions.
-     * <p>Requires Permission:
-     *   {@link android.Manifest.permission#ACCESS_MOCK_LOCATION}.
+     * Verify that checking clearTestProviderLocation for network requires
+     * permissions.
+     * <p>
+     * Requires Permission:
+     * {@link android.Manifest.permission#ACCESS_MOCK_LOCATION}.
      */
     @SmallTest
     public void testClearTestProviderLocation() {
@@ -334,13 +381,15 @@ public class NoLocationPermissionTest extends AndroidTestCase {
             fail("LocationManager.clearTestProviderLocation did not throw SecurityException as"
                     + " expected");
         } catch (SecurityException e) {
+            // expected
         }
     }
 
     /**
      * Verify that checking setTestProviderEnabled requires permissions.
-     * <p>Requires Permission:
-     *   {@link android.Manifest.permission#ACCESS_MOCK_LOCATION}.
+     * <p>
+     * Requires Permission:
+     * {@link android.Manifest.permission#ACCESS_MOCK_LOCATION}.
      */
     @SmallTest
     public void testSetTestProviderEnabled() {
@@ -349,13 +398,15 @@ public class NoLocationPermissionTest extends AndroidTestCase {
             fail("LocationManager.setTestProviderEnabled did not throw SecurityException as"
                     + " expected");
         } catch (SecurityException e) {
+            // expected
         }
     }
 
     /**
      * Verify that checking clearTestProviderEnabled requires permissions.
-     * <p>Requires Permission:
-     *   {@link android.Manifest.permission#ACCESS_MOCK_LOCATION}.
+     * <p>
+     * Requires Permission:
+     * {@link android.Manifest.permission#ACCESS_MOCK_LOCATION}.
      */
     @SmallTest
     public void testClearTestProviderEnabled() {
@@ -364,13 +415,15 @@ public class NoLocationPermissionTest extends AndroidTestCase {
             fail("LocationManager.setTestProviderEnabled did not throw SecurityException as"
                     + " expected");
         } catch (SecurityException e) {
+            // expected
         }
     }
 
     /**
      * Verify that checking setTestProviderStatus requires permissions.
-     * <p>Requires Permission:
-     *   {@link android.Manifest.permission#ACCESS_MOCK_LOCATION}.
+     * <p>
+     * Requires Permission:
+     * {@link android.Manifest.permission#ACCESS_MOCK_LOCATION}.
      */
     @SmallTest
     public void testSetTestProviderStatus() {
@@ -384,8 +437,9 @@ public class NoLocationPermissionTest extends AndroidTestCase {
 
     /**
      * Verify that checking clearTestProviderStatus requires permissions.
-     * <p>Requires Permission:
-     *   {@link android.Manifest.permission#ACCESS_MOCK_LOCATION}.
+     * <p>
+     * Requires Permission:
+     * {@link android.Manifest.permission#ACCESS_MOCK_LOCATION}.
      */
     @SmallTest
     public void testClearTestProviderStatus() {
@@ -394,6 +448,7 @@ public class NoLocationPermissionTest extends AndroidTestCase {
             fail("LocationManager.setTestProviderStatus did not throw SecurityException as"
                     + " expected");
         } catch (SecurityException e) {
+            // expected
         }
     }
 

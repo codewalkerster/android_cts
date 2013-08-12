@@ -16,11 +16,15 @@
 
 package android.openglperf.cts;
 
+/**
+ * Interface used to notify the completion of requested rendering.
+ */
 public interface RenderCompletionListener {
     /**
-     * @param fps total frame rate
+     * @param averageFps average of total frames
      * @param numTriangles Number of triangles in geometric model
+     * @param frameInterval interval for each frame in ms. Do not use the first one and the last one.
      */
-    void onRenderCompletion(float fps, int numTriangles);
+    void onRenderCompletion(float averageFps, int numTriangles, int[] frameInterval);
 
 }

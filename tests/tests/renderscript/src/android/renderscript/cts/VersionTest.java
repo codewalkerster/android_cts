@@ -17,6 +17,7 @@
 package android.renderscript.cts;
 
 import android.renderscript.RenderScript.RSMessageHandler;
+import android.renderscript.RSRuntimeException;
 import com.android.cts.stub.R;
 
 /**
@@ -80,6 +81,28 @@ public class VersionTest extends RSBaseCompute {
                                               R.raw.set_target_api_16);
         test16.invoke_check(16);
         waitForMessage();
+        checkForErrors();
+    }
+
+    public void testVersion17() {
+        ScriptC_set_target_api_17 test17 =
+                new ScriptC_set_target_api_17(mRS,
+                                              mRes,
+                                              R.raw.set_target_api_17);
+        test17.invoke_check(17);
+        waitForMessage();
+        checkForErrors();
+    }
+
+    public void testVersion_too_high() {
+        try {
+            ScriptC_set_target_api_too_high test_too_high =
+                    new ScriptC_set_target_api_too_high(mRS,
+                                                        mRes,
+                                                        R.raw.set_target_api_too_high);
+            fail("should throw RSRuntimeException");
+        } catch (RSRuntimeException e) {
+        }
         checkForErrors();
     }
 }

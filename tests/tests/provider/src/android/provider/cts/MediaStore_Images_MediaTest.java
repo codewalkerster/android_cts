@@ -178,14 +178,22 @@ public class MediaStore_Images_MediaTest extends InstrumentationTestCase {
     }
 
     public void testGetContentUri() {
-        assertNotNull(mContentResolver.query(Media.getContentUri("internal"), null, null, null,
+        Cursor c = null;
+        assertNotNull(c = mContentResolver.query(Media.getContentUri("internal"), null, null, null,
                 null));
-        assertNotNull(mContentResolver.query(Media.getContentUri("external"), null, null, null,
+        c.close();
+        assertNotNull(c = mContentResolver.query(Media.getContentUri("external"), null, null, null,
                 null));
+        c.close();
 
         // can not accept any other volume names
         String volume = "fakeVolume";
         assertNull(mContentResolver.query(Media.getContentUri(volume), null, null, null, null));
+    }
+
+    private void cleanExternalMediaFile(String path) {
+        mContentResolver.delete(Media.EXTERNAL_CONTENT_URI, "_data=?", new String[] { path });
+        new File(path).delete();
     }
 
     public void testStoreImagesMediaExternal() throws Exception {
@@ -193,6 +201,10 @@ public class MediaStore_Images_MediaTest extends InstrumentationTestCase {
                 "/testimage.jpg";
         final String externalPath2 = Environment.getExternalStorageDirectory().getPath() +
                 "/testimage1.jpg";
+
+        // clean up any potential left over entries from a previous aborted run
+        cleanExternalMediaFile(externalPath);
+        cleanExternalMediaFile(externalPath2);
 
         int numBytes = 1337;
         FileUtils.createFile(new File(externalPath), numBytes);
@@ -294,6 +306,7 @@ public class MediaStore_Images_MediaTest extends InstrumentationTestCase {
         } finally {
             // delete
             assertEquals(1, mContentResolver.delete(uri, null, null));
+            new File(externalPath).delete();
         }
     }
 

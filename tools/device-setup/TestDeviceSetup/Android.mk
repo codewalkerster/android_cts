@@ -26,7 +26,7 @@ LOCAL_DEX_PREOPT := false
 
 LOCAL_JAVA_LIBRARIES := android.test.runner
 
-LOCAL_SDK_VERSION := current
+LOCAL_SDK_VERSION := 17
 
 LOCAL_PACKAGE_NAME := TestDeviceSetup
 

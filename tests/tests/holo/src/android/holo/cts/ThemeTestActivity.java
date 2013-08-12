@@ -85,7 +85,8 @@ public class ThemeTestActivity extends Activity {
         int layoutIndex = getIntent().getIntExtra(EXTRA_LAYOUT_INDEX, -1);
         int adapterMode = getIntent().getIntExtra(EXTRA_LAYOUT_ADAPTER_MODE, -1);
 
-        Log.i(TAG, "Theme index: " + themeIndex + " Layout index: " + layoutIndex);
+        Log.i(TAG, "Theme index: " + themeIndex + " Layout index: " + layoutIndex +
+                " adapter mode: " + adapterMode);
 
         if (themeIndex < 0 && layoutIndex < 0) {
             mIterator = new AllThemesIterator(task, adapterMode);
@@ -109,6 +110,11 @@ public class ThemeTestActivity extends Activity {
             startActivityForResult(intent, mRequestCode);
         } else {
             mResultFuture.set(mPendingResult);
+            if (mRequestCode == GENERATE_BITMAP_REQUEST_CODE) {
+                // finish with result so that generated bitmaps can be captured automatically
+                setResult(0);
+                finish();
+            }
         }
     }
 

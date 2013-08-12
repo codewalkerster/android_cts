@@ -25,6 +25,7 @@ import android.webkit.ConsoleMessage;
 import android.webkit.WebIconDatabase;
 import android.webkit.WebSettings;
 import android.webkit.WebSettings.TextSize;
+import android.webkit.WebStorage;
 import android.webkit.WebView;
 import android.webkit.cts.WebViewOnUiThread.WaitForProgressClient;
 import java.io.FileOutputStream;
@@ -154,47 +155,6 @@ public class WebSettingsTest extends ActivityInstrumentationTestCase2<WebViewStu
         mOnUiThread.loadUrlAndWaitForCompletion(url);
         assertEquals(customUserAgent, mOnUiThread.getTitle());
     }
-
-    @SuppressWarnings("deprecation")
-    public void testAccessUserAgent() throws Exception {
-        startWebServer();
-        String url = mWebServer.getUserAgentUrl();
-
-        mSettings.setUserAgent(1);
-        assertEquals(1, mSettings.getUserAgent());
-        mOnUiThread.loadUrlAndWaitForCompletion(url);
-        String userAgent1 = mOnUiThread.getTitle();
-        assertNotNull(userAgent1);
-
-        mSettings.setUserAgent(3);
-        assertEquals(1, mSettings.getUserAgent());
-        mOnUiThread.loadUrlAndWaitForCompletion(url);
-        assertEquals(userAgent1, mOnUiThread.getTitle());
-
-        mSettings.setUserAgent(2);
-        assertEquals(2, mSettings.getUserAgent());
-        mOnUiThread.loadUrlAndWaitForCompletion(url);
-        String userAgent2 = mOnUiThread.getTitle();
-        assertNotNull(userAgent2);
-
-        mSettings.setUserAgent(3);
-        assertEquals(2, mSettings.getUserAgent());
-        mOnUiThread.loadUrlAndWaitForCompletion(url);
-        assertEquals(userAgent2, mOnUiThread.getTitle());
-
-        mSettings.setUserAgent(0);
-        assertEquals(0, mSettings.getUserAgent());
-        mOnUiThread.loadUrlAndWaitForCompletion(url);
-        String userAgent0 = mOnUiThread.getTitle();
-        assertNotNull(userAgent0);
-
-        final String customUserAgent = "Cts/Test";
-        mSettings.setUserAgentString(customUserAgent);
-        assertEquals(-1, mSettings.getUserAgent());
-        mOnUiThread.loadUrlAndWaitForCompletion(url);
-        assertEquals(customUserAgent, mOnUiThread.getTitle());
-    }
-
 
     public void testAccessAllowFileAccess() {
         // This test is not compatible with 4.0.3
@@ -387,11 +347,9 @@ public class WebSettingsTest extends ActivityInstrumentationTestCase2<WebViewStu
         new PollingCheck(WEBVIEW_TIMEOUT) {
             @Override
             protected boolean check() {
-                String title = mOnUiThread.getTitle();
-                return title != null && title.length() > 0;
+                return "Popup blocked".equals(mOnUiThread.getTitle());
             }
         }.run();
-        assertEquals("Popup blocked", mOnUiThread.getTitle());
 
         mSettings.setJavaScriptCanOpenWindowsAutomatically(true);
         assertTrue(mSettings.getJavaScriptCanOpenWindowsAutomatically());
@@ -399,15 +357,9 @@ public class WebSettingsTest extends ActivityInstrumentationTestCase2<WebViewStu
         new PollingCheck(WEBVIEW_TIMEOUT) {
             @Override
             protected boolean check() {
-                String title = mOnUiThread.getTitle();
-                // The title may not change immediately after loading, so
-                // we have to discount the initial "Popup blocked" from the
-                // previous load.
-                return title != null && title.length() > 0
-                        && !title.equals("Popup blocked");
+                return "Popup allowed".equals(mOnUiThread.getTitle());
             }
         }.run();
-        assertEquals("Popup allowed", mOnUiThread.getTitle());
     }
 
     public void testAccessJavaScriptEnabled() throws Exception {
@@ -417,10 +369,9 @@ public class WebSettingsTest extends ActivityInstrumentationTestCase2<WebViewStu
         new PollingCheck(WEBVIEW_TIMEOUT) {
             @Override
             protected boolean check() {
-                return mOnUiThread.getTitle() != null;
+                return "javascript on".equals(mOnUiThread.getTitle());
             }
         }.run();
-        assertEquals("javascript on", mOnUiThread.getTitle());
 
         mSettings.setJavaScriptEnabled(false);
         assertFalse(mSettings.getJavaScriptEnabled());
@@ -428,10 +379,10 @@ public class WebSettingsTest extends ActivityInstrumentationTestCase2<WebViewStu
         new PollingCheck(WEBVIEW_TIMEOUT) {
             @Override
             protected boolean check() {
-                return mOnUiThread.getTitle() != null;
+                return "javascript off".equals(mOnUiThread.getTitle());
             }
         }.run();
-        assertEquals("javascript off", mOnUiThread.getTitle());
+
     }
 
     public void testAccessLayoutAlgorithm() {
@@ -442,13 +393,6 @@ public class WebSettingsTest extends ActivityInstrumentationTestCase2<WebViewStu
 
         mSettings.setLayoutAlgorithm(WebSettings.LayoutAlgorithm.SINGLE_COLUMN);
         assertEquals(WebSettings.LayoutAlgorithm.SINGLE_COLUMN, mSettings.getLayoutAlgorithm());
-    }
-
-    public void testAccessLightTouchEnabled() {
-        assertFalse(mSettings.getLightTouchEnabled());
-
-        mSettings.setLightTouchEnabled(true);
-        assertTrue(mSettings.getLightTouchEnabled());
     }
 
     public void testAccessMinimumFontSize() {
@@ -477,13 +421,6 @@ public class WebSettingsTest extends ActivityInstrumentationTestCase2<WebViewStu
         assertEquals(10, mSettings.getMinimumLogicalFontSize());
     }
 
-    public void testAccessNavDump() {
-        assertFalse(mSettings.getNavDump());
-
-        mSettings.setNavDump(true);
-        assertTrue(mSettings.getNavDump());
-    }
-
     public void testAccessPluginsEnabled() {
         assertFalse(mSettings.getPluginsEnabled());
 
@@ -505,13 +442,6 @@ public class WebSettingsTest extends ActivityInstrumentationTestCase2<WebViewStu
 
         mSettings.setSaveFormData(false);
         assertFalse(mSettings.getSaveFormData());
-    }
-
-    public void testAccessSavePassword() {
-        assertTrue(mSettings.getSavePassword());
-
-        mSettings.setSavePassword(false);
-        assertFalse(mSettings.getSavePassword());
     }
 
     public void testAccessTextSize() {
@@ -646,6 +576,32 @@ public class WebSettingsTest extends ActivityInstrumentationTestCase2<WebViewStu
         }.run();
     }
 
+    // Ideally, we need a test case for the enabled case. However, it seems that
+    // enabling the database should happen prior to navigating the first url due to
+    // some internal limitations of webview. For this reason, we only provide a
+    // test case for "disabled" behavior.
+    // Also loading as data rather than using URL should work, but it causes a
+    // security exception in JS, most likely due to cross domain access. So we load
+    // using a URL. Finally, it looks like enabling database requires creating a
+    // webChromeClient and listening to Quota callbacks, which is not documented.
+    public void testDatabaseDisabled() throws Throwable {
+        // Verify that websql database does not work when disabled.
+        startWebServer();
+
+        mOnUiThread.setWebChromeClient(new ChromeClient(mOnUiThread) {
+            @Override
+            public void onExceededDatabaseQuota(String url, String databaseId, long quota,
+                long estimatedSize, long total, WebStorage.QuotaUpdater updater) {
+                updater.updateQuota(estimatedSize);
+            }
+        });
+        mSettings.setJavaScriptEnabled(true);
+        mSettings.setDatabaseEnabled(false);
+        final String url = mWebServer.getAssetUrl(TestHtmlConstants.DATABASE_ACCESS_URL);
+        mOnUiThread.loadUrlAndWaitForCompletion(url);
+        assertEquals("No database", mOnUiThread.getTitle());
+    }
+
     public void testLoadsImagesAutomatically() throws Throwable {
         assertTrue(mSettings.getLoadsImagesAutomatically());
 
@@ -727,7 +683,7 @@ public class WebSettingsTest extends ActivityInstrumentationTestCase2<WebViewStu
         mOnUiThread.clearCache(true);
         mOnUiThread.loadUrlAndWaitForCompletion(
             mWebServer.getAssetUrl(TestHtmlConstants.HELLO_WORLD_URL));
-        assertEquals(TestHtmlConstants.WEBPAGE_NOT_AVAILABLE_TITLE, mOnUiThread.getTitle());
+        assertFalse(TestHtmlConstants.HELLO_WORLD_TITLE.equals(mOnUiThread.getTitle()));
         mOnUiThread.loadDataAndWaitForCompletion(getNetworkImageHtml(), "text/html", null);
         assertEquals(EMPTY_IMAGE_HEIGHT, mOnUiThread.getTitle());
         mOnUiThread.loadDataAndWaitForCompletion(DATA_URL_IMAGE_HTML, "text/html", null);

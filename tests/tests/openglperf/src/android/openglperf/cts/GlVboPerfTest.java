@@ -26,8 +26,8 @@ public class GlVboPerfTest extends
     private static final String TAG = "GlVboPerfTest";
     private static final int NUM_FRAMES_TO_RENDER = 100;
     private static final long RENDERING_TIMEOUT = 5 * 60;
-    // 10% of fps_no_vbo is allowed to compensate variations in measurement
-    private static final float FPS_COMPARISON_MARGIN = 0.1f;
+    // 30% of fps_no_vbo is allowed to compensate variations in measurement
+    private static final float FPS_COMPARISON_MARGIN = 0.3f;
     // the worst case should be above 70% of the best case
     private static final float FPS_MIN_MAX_COMPARISON_PERCENTILE = 0.7f;
 
@@ -87,14 +87,14 @@ public class GlVboPerfTest extends
     }
 
     private void runRendering(int numPlanets, boolean useVboVertex, boolean useVboIndex,
-            int indicesPerVertex) throws Exception {
+            int numIndexBuffers) throws Exception {
         Intent intent = new Intent();
         intent.putExtra(GlPlanetsActivity.INTENT_EXTRA_NUM_FRAMES,
                 NUM_FRAMES_TO_RENDER);
         intent.putExtra(GlPlanetsActivity.INTENT_EXTRA_NUM_PLANETS, numPlanets);
         intent.putExtra(GlPlanetsActivity.INTENT_EXTRA_USE_VBO_VERTICES, useVboVertex);
         intent.putExtra(GlPlanetsActivity.INTENT_EXTRA_USE_VBO_INDICES, useVboIndex);
-        intent.putExtra(GlPlanetsActivity.INTENT_EXTRA_INDICES_PER_VERTEX, indicesPerVertex);
+        intent.putExtra(GlPlanetsActivity.INTENT_EXTRA_NUM_INDEX_BUFFERS, numIndexBuffers);
 
         setActivityIntent(intent);
         final GlPlanetsActivity activity = getActivity();
@@ -102,7 +102,7 @@ public class GlVboPerfTest extends
                 .waitForGlPlanetsCompletionWithTimeout(RENDERING_TIMEOUT);
         assertTrue("timeout while waiting for rendering completion", waitResult);
 
-        mFps = activity.getFps();
+        mFps = activity.getAverageFps();
         mNumTriangles = activity.getNumTriangles();
 
         cleanUpActivity();

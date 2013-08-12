@@ -99,10 +99,16 @@ public class MediaStore_Video_ThumbnailsTest extends AndroidTestCase {
             assertFalse("thumbnail file should no longer exist", new File(path).exists());
         }
         c.close();
+
+        assertEquals(1, mResolver.delete(videoUri, null, null));
     }
 
     private Uri insertVideo() throws IOException {
         File file = new File(Environment.getExternalStorageDirectory(), "testVideo.3gp");
+        // clean up any potential left over entries from a previous aborted run
+        mResolver.delete(Media.EXTERNAL_CONTENT_URI,
+                "_data=?", new String[] { file.getAbsolutePath() });
+        file.delete();
         mFileHelper.copyToExternalStorage(R.raw.testvideo, file);
 
         ContentValues values = new ContentValues();

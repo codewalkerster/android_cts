@@ -24,6 +24,7 @@ import android.test.AndroidTestCase;
 import android.text.format.DateFormat;
 
 import java.text.ParseException;
+import java.text.SimpleDateFormat;
 import java.util.Calendar;
 import java.util.Date;
 import java.util.GregorianCalendar;
@@ -34,10 +35,11 @@ public class DateFormatTest extends AndroidTestCase {
 
     private Context mContext;
     private ContentResolver mContentResolver;
-    // Date: 12-18-2008 5:30AM
+
+    // Date: 2008-12-18 05:30
     private static final int YEAR_FROM_1900 = 108;
     private static final int YEAR = 2008;
-    private static final int MONTH = 11;
+    private static final int MONTH = Calendar.DECEMBER; // java.util.Calendar months are 0-based.
     private static final int DAY = 18;
     private static final int HOUR = 5;
     private static final int MINUTE = 30;
@@ -70,11 +72,49 @@ public class DateFormatTest extends AndroidTestCase {
     }
 
 
-    public void testDateFormat() {
+    public void test_is24HourFormat() {
         Settings.System.putString(mContentResolver, Settings.System.TIME_12_24, "24");
         assertTrue(DateFormat.is24HourFormat(mContext));
         Settings.System.putString(mContentResolver, Settings.System.TIME_12_24, "12");
         assertFalse(DateFormat.is24HourFormat(mContext));
+    }
+
+    public void test_format_M() {
+        Calendar c = new GregorianCalendar(2008, Calendar.DECEMBER, 18);
+        assertEquals("D", DateFormat.format("MMMMM", c));
+        assertEquals("December", DateFormat.format("MMMM", c));
+        assertEquals("Dec", DateFormat.format("MMM", c));
+        assertEquals("12", DateFormat.format("MM", c));
+        assertEquals("12", DateFormat.format("M", c));
+    }
+
+    public void test_format_L() {
+        // TODO: we can't test other locales with this API so we can't test 'L' properly!
+        Calendar c = new GregorianCalendar(2008, Calendar.DECEMBER, 18);
+        assertEquals("D", DateFormat.format("LLLLL", c));
+        assertEquals("December", DateFormat.format("LLLL", c));
+        assertEquals("Dec", DateFormat.format("LLL", c));
+        assertEquals("12", DateFormat.format("LL", c));
+        assertEquals("12", DateFormat.format("L", c));
+    }
+
+    public void test_format_E() {
+        Calendar c = new GregorianCalendar(2008, Calendar.DECEMBER, 18);
+        assertEquals("T", DateFormat.format("EEEEE", c));
+        assertEquals("Thursday", DateFormat.format("EEEE", c));
+        assertEquals("Thu", DateFormat.format("EEE", c));
+        assertEquals("Thu", DateFormat.format("EE", c));
+        assertEquals("Thu", DateFormat.format("E", c));
+    }
+
+    public void test_format_c() {
+        // TODO: we can't test other locales with this API, so we can't test 'c' properly!
+        Calendar c = new GregorianCalendar(2008, Calendar.DECEMBER, 18);
+        assertEquals("T", DateFormat.format("ccccc", c));
+        assertEquals("Thursday", DateFormat.format("cccc", c));
+        assertEquals("Thu", DateFormat.format("ccc", c));
+        assertEquals("Thu", DateFormat.format("cc", c));
+        assertEquals("Thu", DateFormat.format("c", c));
     }
 
     @SuppressWarnings("deprecation")
@@ -129,22 +169,68 @@ public class DateFormatTest extends AndroidTestCase {
 
         calendar.setTimeInMillis(((long) Integer.MIN_VALUE + Integer.MIN_VALUE) * 1000L);
         assertEquals("Sun Nov 24 17:31:44 GMT+00:00 1833",
-                DateFormat.format("EEE MMM dd kk:mm:ss zzz yyyy", calendar));
+                DateFormat.format("EEE MMM dd HH:mm:ss zzz yyyy", calendar));
 
         calendar.setTimeInMillis(Integer.MIN_VALUE * 1000L);
         assertEquals("Fri Dec 13 20:45:52 GMT+00:00 1901",
-                DateFormat.format("EEE MMM dd kk:mm:ss zzz yyyy", calendar));
+                DateFormat.format("EEE MMM dd HH:mm:ss zzz yyyy", calendar));
 
         calendar.setTimeInMillis(0L);
         assertEquals("Thu Jan 01 00:00:00 GMT+00:00 1970",
-                DateFormat.format("EEE MMM dd kk:mm:ss zzz yyyy", calendar));
+                DateFormat.format("EEE MMM dd HH:mm:ss zzz yyyy", calendar));
 
         calendar.setTimeInMillis(Integer.MAX_VALUE * 1000L);
         assertEquals("Tue Jan 19 03:14:07 GMT+00:00 2038",
-                DateFormat.format("EEE MMM dd kk:mm:ss zzz yyyy", calendar));
+                DateFormat.format("EEE MMM dd HH:mm:ss zzz yyyy", calendar));
 
         calendar.setTimeInMillis((2L + Integer.MAX_VALUE + Integer.MAX_VALUE) * 1000L);
         assertEquals("Sun Feb 07 06:28:16 GMT+00:00 2106",
-                DateFormat.format("EEE MMM dd kk:mm:ss zzz yyyy", calendar));
+                DateFormat.format("EEE MMM dd HH:mm:ss zzz yyyy", calendar));
+    }
+
+    private static void checkFormat(String expected, String pattern, int hour) {
+        TimeZone utc = TimeZone.getTimeZone("UTC");
+
+        Calendar c = new GregorianCalendar(utc);
+        c.set(2013, Calendar.JANUARY, 1, hour, 00);
+
+        SimpleDateFormat sdf = new SimpleDateFormat(pattern);
+        sdf.setTimeZone(utc);
+
+        if (pattern.equals("k") && (hour == 0 || hour == 24)) {
+          // http://b/8359981: 'k' has always been broken on Android, and we keep it broken
+          // for compatibility. Maybe one day we'll be able to fix this...
+          assertEquals("0", DateFormat.format(pattern, c));
+        } else {
+          assertEquals(expected, DateFormat.format(pattern, c));
+        }
+        assertEquals(expected, sdf.format(c.getTime()));
+    }
+
+    public void test_bug_8359981() {
+        checkFormat("24", "k", 00);
+        checkFormat( "0", "K", 00);
+        checkFormat("12", "h", 00);
+        checkFormat( "0", "H", 00);
+
+        checkFormat( "1", "k", 01);
+        checkFormat( "1", "K", 01);
+        checkFormat( "1", "h", 01);
+        checkFormat( "1", "H", 01);
+
+        checkFormat("12", "k", 12);
+        checkFormat( "0", "K", 12);
+        checkFormat("12", "h", 12);
+        checkFormat("12", "H", 12);
+
+        checkFormat("13", "k", 13);
+        checkFormat( "1", "K", 13);
+        checkFormat( "1", "h", 13);
+        checkFormat("13", "H", 13);
+
+        checkFormat("24", "k", 24);
+        checkFormat( "0", "K", 24);
+        checkFormat("12", "h", 24);
+        checkFormat( "0", "H", 24);
     }
 }

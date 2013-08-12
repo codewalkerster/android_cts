@@ -22,6 +22,18 @@ import junit.framework.TestCase;
 
 public class BannedFilesTest extends TestCase {
 
+    /**
+     * Detect devices vulnerable to the cmdclient privilege escalation bug.
+     *
+     * References:
+     *
+     * http://vulnfactory.org/blog/2012/02/18/xoom-fe-stupid-bugs-and-more-plagiarism/
+     * http://forum.xda-developers.com/showthread.php?t=1213014
+     */
+    public void testNoCmdClient() {
+        assertNotSetugid("/system/bin/cmdclient");
+    }
+
     public void testNoSyncAgent() {
         assertNotSetugid("/system/bin/sync_agent");
     }
@@ -56,7 +68,7 @@ public class BannedFilesTest extends TestCase {
         if (!FileUtils.getFileStatus(file, fs, false)) {
             return;
         }
-        assertTrue((fs.mode & FileUtils.S_ISUID) == 0);
-        assertTrue((fs.mode & FileUtils.S_ISGID) == 0);
+        assertTrue("File \"" + file + "\" is setUID", (fs.mode & FileUtils.S_ISUID) == 0);
+        assertTrue("File \"" + file + "\" is setGID", (fs.mode & FileUtils.S_ISGID) == 0);
     }
 }

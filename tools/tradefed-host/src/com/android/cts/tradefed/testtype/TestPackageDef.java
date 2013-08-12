@@ -44,11 +44,12 @@ class TestPackageDef implements ITestPackageDef {
 
     public static final String HOST_SIDE_ONLY_TEST = "hostSideOnly";
     public static final String NATIVE_TEST = "native";
+    public static final String WRAPPED_NATIVE_TEST = "wrappednative";
     public static final String VM_HOST_TEST = "vmHostTest";
     public static final String ACCESSIBILITY_TEST =
         "com.android.cts.tradefed.testtype.AccessibilityTestRunner";
-    public static final String ACCESSIBILITYSERVICE_TEST =
-        "com.android.cts.tradefed.testtype.AccessibilityServiceTestRunner";
+    public static final String DISPLAY_TEST =
+            "com.android.cts.tradefed.testtype.DisplayTestRunner";
     public static final String UIAUTOMATOR_TEST = "uiAutomator";
 
     private static final String SIGNATURE_TEST_METHOD = "testSignature";
@@ -221,11 +222,14 @@ class TestPackageDef implements ITestPackageDef {
             return vmHostTest;
         } else if (NATIVE_TEST.equals(mTestType)) {
             return new GeeTest(mUri, mName);
+        } else if (WRAPPED_NATIVE_TEST.equals(mTestType)) {
+            CLog.d("Creating new wrapped native test for %s", mName);
+            return new WrappedGTest(mAppNameSpace, mUri, mName, mRunner);
         } else if (ACCESSIBILITY_TEST.equals(mTestType)) {
             AccessibilityTestRunner test = new AccessibilityTestRunner();
             return setInstrumentationTest(test, testCaseDir);
-        } else if (ACCESSIBILITYSERVICE_TEST.equals(mTestType)) {
-            AccessibilityServiceTestRunner test = new AccessibilityServiceTestRunner();
+        } else if (DISPLAY_TEST.equals(mTestType)) {
+            DisplayTestRunner test = new DisplayTestRunner();
             return setInstrumentationTest(test, testCaseDir);
         } else if (UIAUTOMATOR_TEST.equals(mTestType)) {
             UiAutomatorJarTest uiautomatorTest = new UiAutomatorJarTest();

@@ -23,12 +23,15 @@ import android.test.AndroidTestCase;
 import android.test.suitebuilder.annotation.MediumTest;
 import android.test.suitebuilder.annotation.LargeTest;
 
+import java.io.BufferedReader;
 import java.io.File;
 import java.io.FileFilter;
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
+import java.io.FileReader;
 import java.io.IOException;
 import java.util.Arrays;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
@@ -191,6 +194,39 @@ public class FileSystemPermissionTest extends AndroidTestCase {
 
         assertFileOwnedBy(f, "nfc");
         assertFileOwnedByGroup(f, "nfc");
+    }
+
+    @MediumTest
+    public void testDevQtaguidSane() throws Exception {
+        File f = new File("/dev/xt_qtaguid");
+        assertTrue(f.canRead());
+        assertFalse(f.canWrite());
+        assertFalse(f.canExecute());
+
+        assertFileOwnedBy(f, "root");
+        assertFileOwnedByGroup(f, "root");
+    }
+
+    @MediumTest
+    public void testProcQtaguidCtrlSane() throws Exception {
+        File f = new File("/proc/net/xt_qtaguid/ctrl");
+        assertTrue(f.canRead());
+        assertTrue(f.canWrite());
+        assertFalse(f.canExecute());
+
+        assertFileOwnedBy(f, "root");
+        assertFileOwnedByGroup(f, "net_bw_acct");
+    }
+
+    @MediumTest
+    public void testProcQtaguidStatsSane() throws Exception {
+        File f = new File("/proc/net/xt_qtaguid/stats");
+        assertTrue(f.canRead());
+        assertFalse(f.canWrite());
+        assertFalse(f.canExecute());
+
+        assertFileOwnedBy(f, "root");
+        assertFileOwnedByGroup(f, "net_bw_stats");
     }
 
     /**
@@ -490,7 +526,8 @@ public class FileSystemPermissionTest extends AndroidTestCase {
 
     @LargeTest
     public void testReadingSysFilesDoesntFail() throws Exception {
-        tryToReadFromAllIn(new File("/sys"));
+        // TODO: fix b/8148087
+        // tryToReadFromAllIn(new File("/sys"));
     }
 
     private static void tryToReadFromAllIn(File dir) throws IOException {
@@ -530,7 +567,13 @@ public class FileSystemPermissionTest extends AndroidTestCase {
 
     private static final Set<File> SYS_EXCEPTIONS = new HashSet<File>(
             Arrays.asList(
-                new File("/sys/kernel/debug/tracing/trace_marker")
+                new File("/sys/kernel/debug/tracing/trace_marker"),
+                new File("/sys/fs/selinux/member"),
+                new File("/sys/fs/selinux/user"),
+                new File("/sys/fs/selinux/relabel"),
+                new File("/sys/fs/selinux/create"),
+                new File("/sys/fs/selinux/access"),
+                new File("/sys/fs/selinux/context")
             ));
 
     @LargeTest
@@ -582,16 +625,107 @@ public class FileSystemPermissionTest extends AndroidTestCase {
         return retval;
     }
 
+    public void testSystemMountedRO() throws IOException {
+        ParsedMounts pm = new ParsedMounts("/proc/self/mounts");
+        String mountPoint = pm.findMountPointContaining(new File("/system"));
+        assertTrue(mountPoint + " is not mounted read-only", pm.isMountReadOnly(mountPoint));
+    }
+
+    /**
+     * Test that the /system directory, as mounted by init, is mounted read-only.
+     * Different processes can have different mount namespaces, so init
+     * may be in a different mount namespace than Zygote spawned processes.
+     *
+     * This test assumes that init's filesystem layout is roughly identical
+     * to Zygote's filesystem layout. If this assumption ever changes, we should
+     * delete this test.
+     */
+    public void testSystemMountedRO_init() throws IOException {
+        ParsedMounts pm = new ParsedMounts("/proc/1/mounts");
+        String mountPoint = pm.findMountPointContaining(new File("/system"));
+        assertTrue(mountPoint + " is not mounted read-only", pm.isMountReadOnly(mountPoint));
+    }
+
+    public void testRootMountedRO() throws IOException {
+        ParsedMounts pm = new ParsedMounts("/proc/self/mounts");
+        String mountPoint = pm.findMountPointContaining(new File("/"));
+        assertTrue("The root directory \"" + mountPoint + "\" is not mounted read-only",
+                   pm.isMountReadOnly(mountPoint));
+    }
+
+    /**
+     * Test that the root directory, as mounted by init, is mounted read-only.
+     * Different processes can have different mount namespaces, so init
+     * may be in a different mount namespace than Zygote spawned processes.
+     *
+     * This test assumes that init's filesystem layout is roughly identical
+     * to Zygote's filesystem layout. If this assumption ever changes, we should
+     * delete this test.
+     */
+    public void testRootMountedRO_init() throws IOException {
+        ParsedMounts pm = new ParsedMounts("/proc/1/mounts");
+        String mountPoint = pm.findMountPointContaining(new File("/"));
+        assertTrue("The root directory \"" + mountPoint + "\" is not mounted read-only",
+                   pm.isMountReadOnly(mountPoint));
+    }
+
     public void testAllBlockDevicesAreSecure() throws Exception {
-        Set<File> insecure = getAllInsecureBlockDevicesInDirAndSubdir(new File("/dev"));
-        assertTrue("Found insecure: " + insecure.toString(),
+        Set<File> insecure = getAllInsecureDevicesInDirAndSubdir(new File("/dev"), FileUtils.S_IFBLK);
+        assertTrue("Found insecure block devices: " + insecure.toString(),
+                insecure.isEmpty());
+    }
+
+    private static final Set<File> CHAR_DEV_EXCEPTIONS = new HashSet<File>(
+            Arrays.asList(
+                // All exceptions should be alphabetical and associated with a bug number.
+                new File("/dev/alarm"),      // b/9035217
+                new File("/dev/ashmem"),
+                new File("/dev/binder"),
+                new File("/dev/full"),
+                new File("/dev/genlock"),    // b/9035217
+                new File("/dev/hw_random"),  // b/9191279
+                new File("/dev/ion"),
+                new File("/dev/kgsl-3d0"),   // b/9035217
+                new File("/dev/log/events"), // b/9035217
+                new File("/dev/log/main"),   // b/9035217
+                new File("/dev/log/radio"),  // b/9035217
+                new File("/dev/log/system"), // b/9035217
+                new File("/dev/mali0"),       // b/9106968
+                new File("/dev/msm_rotator"), // b/9035217
+                new File("/dev/null"),
+                new File("/dev/nvhost-ctrl"), // b/9088251
+                new File("/dev/nvhost-gr2d"), // b/9088251
+                new File("/dev/nvhost-gr3d"), // b/9088251
+                new File("/dev/nvmap"),       // b/9088251
+                new File("/dev/ptmx"),        // b/9088251
+                new File("/dev/pvrsrvkm"),    // b/9108170
+                new File("/dev/random"),
+                new File("/dev/tiler"),       // b/9108170
+                new File("/dev/tty"),
+                new File("/dev/urandom"),
+                new File("/dev/xt_qtaguid"),  // b/9088251
+                new File("/dev/zero")
+            ));
+
+    public void testAllCharacterDevicesAreSecure() throws Exception {
+        Set<File> insecure = getAllInsecureDevicesInDirAndSubdir(new File("/dev"), FileUtils.S_IFCHR);
+        Set<File> insecurePts = getAllInsecureDevicesInDirAndSubdir(new File("/dev/pts"), FileUtils.S_IFCHR);
+        insecure.removeAll(CHAR_DEV_EXCEPTIONS);
+        insecure.removeAll(insecurePts);
+        assertTrue("Found insecure character devices: " + insecure.toString(),
                 insecure.isEmpty());
     }
 
     private static Set<File>
-    getAllInsecureBlockDevicesInDirAndSubdir(File dir) throws Exception {
+    getAllInsecureDevicesInDirAndSubdir(File dir, int type) throws Exception {
         assertTrue(dir.isDirectory());
         Set<File> retval = new HashSet<File>();
+
+        if (isSymbolicLink(dir)) {
+            // don't examine symbolic links.
+            return retval;
+        }
+
         File[] subDirectories = dir.listFiles(new FileFilter() {
             @Override public boolean accept(File pathname) {
                 return pathname.isDirectory();
@@ -602,7 +736,7 @@ public class FileSystemPermissionTest extends AndroidTestCase {
         /* recurse into subdirectories */
         if (subDirectories != null) {
             for (File f : subDirectories) {
-                retval.addAll(getAllInsecureBlockDevicesInDirAndSubdir(f));
+                retval.addAll(getAllInsecureDevicesInDirAndSubdir(f, type));
             }
         }
 
@@ -614,16 +748,16 @@ public class FileSystemPermissionTest extends AndroidTestCase {
         for (File f: filesInThisDirectory) {
             FileUtils.FileStatus status = new FileUtils.FileStatus();
             FileUtils.getFileStatus(f.getAbsolutePath(), status, false);
-            if (status.hasModeFlag(FileUtils.S_IFBLK)) {
+            if (status.isOfType(type)) {
                 if (f.canRead() || f.canWrite() || f.canExecute()) {
                     retval.add(f);
                 }
                 if (status.uid == 2000) {
-                    // The shell user should not own any block devices
+                    // The shell user should not own any devices
                     retval.add(f);
                 }
 
-                // Don't allow block devices owned by GIDs
+                // Don't allow devices owned by GIDs
                 // accessible to non-privileged applications.
                 if ((status.gid == 1007)           // AID_LOG
                           || (status.gid == 1015)  // AID_SDCARD_RW
@@ -635,9 +769,6 @@ public class FileSystemPermissionTest extends AndroidTestCase {
                             || status.hasModeFlag(FileUtils.S_IWGRP)
                             || status.hasModeFlag(FileUtils.S_IXGRP))
                     {
-
-                        // non-privileged GIDs should not be able to access
-                        // any block device.
                         retval.add(f);
                     }
                 }
@@ -683,5 +814,50 @@ public class FileSystemPermissionTest extends AndroidTestCase {
 
     private static boolean isSymbolicLink(File f) throws IOException {
         return !f.getAbsolutePath().equals(f.getCanonicalPath());
+    }
+
+    private static class ParsedMounts {
+        private HashMap<String, Boolean> mFileReadOnlyMap = new HashMap<String, Boolean>();
+
+        private ParsedMounts(String filename) throws IOException {
+            BufferedReader br = new BufferedReader(new FileReader(filename));
+            try {
+                String line;
+                while ((line = br.readLine()) != null) {
+                    String[] fields = line.split(" ");
+                    String mountPoint = fields[1];
+                    String all_options = fields[3];
+                    String[] options = all_options.split(",");
+                    boolean foundRo = false;
+                    for (String option : options) {
+                        if ("ro".equals(option)) {
+                            foundRo = true;
+                            break;
+                        }
+                    }
+                    mFileReadOnlyMap.put(mountPoint, foundRo);
+                }
+           } finally {
+               br.close();
+           }
+        }
+
+        private boolean isMountReadOnly(String s) {
+            return mFileReadOnlyMap.get(s).booleanValue();
+        }
+
+        private String findMountPointContaining(File f) throws IOException {
+            while (f != null) {
+                f = f.getCanonicalFile();
+                String path = f.getPath();
+                if (mFileReadOnlyMap.containsKey(path)) {
+                    return path;
+                }
+                f = f.getParentFile();
+            }
+            // This should NEVER be reached, as we'll eventually hit the
+            // root directory.
+            throw new AssertionError("Unable to find mount point");
+        }
     }
 }

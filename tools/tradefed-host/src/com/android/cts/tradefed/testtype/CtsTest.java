@@ -40,6 +40,7 @@ import com.android.tradefed.testtype.IDeviceTest;
 import com.android.tradefed.testtype.IRemoteTest;
 import com.android.tradefed.testtype.IResumableTest;
 import com.android.tradefed.testtype.IShardableTest;
+import com.android.tradefed.util.RunUtil;
 import com.android.tradefed.util.xml.AbstractXmlParser.ParseException;
 
 import java.io.BufferedInputStream;
@@ -149,6 +150,20 @@ public class CtsTest implements IDeviceTest, IResumableTest, IShardableTest, IBu
             "Interval between each reboot in min.")
     private int mRebootIntervalMin = 30;
 
+    @Option(name = "screenshot-on-failure", description =
+            "take a screenshot on every test failure.")
+    private boolean mScreenshotOnFailures = false;
+
+    @Option(name = "logcat-on-failure", description =
+            "take a logcat snapshot on every test failure. Unlike --bugreport, this can capture" +
+            "logs even if connection with device has been lost, as well as being much more " +
+            "performant.")
+    private boolean mLogcatOnFailures = false;
+
+    @Option(name = "logcat-on-failure-size", description =
+            "The max number of logcat data in bytes to capture when --logcat-on-failure is on. " +
+            "Should be an amount that can comfortably fit in memory.")
+    private int mMaxLogcatBytes = 500 * 1024; // 500K
 
     private long mPrevRebootTime; // last reboot time
 
@@ -200,9 +215,65 @@ public class CtsTest implements IDeviceTest, IResumableTest, IShardableTest, IBu
         public void testFailed(TestFailure status, TestIdentifier test, String trace) {
             super.testFailed(status, test, trace);
             InputStreamSource bugSource = mDevice.getBugreport();
-            super.testLog(String.format("bug-%s", test.toString()), LogDataType.TEXT,
-                    bugSource);
+            super.testLog(String.format("bug-%s_%s", test.getClassName(), test.getTestName()),
+                    LogDataType.TEXT, bugSource);
             bugSource.cancel();
+        }
+    }
+
+    /**
+     * A {@link ResultForwarder} that will forward a logcat snapshot on each failed test.
+     */
+    private static class FailedTestLogcatGenerator extends ResultForwarder {
+        private ITestDevice mDevice;
+        private int mNumLogcatBytes;
+
+        public FailedTestLogcatGenerator(ITestInvocationListener listener, ITestDevice device,
+                int maxLogcatBytes) {
+            super(listener);
+            mDevice = device;
+            mNumLogcatBytes = maxLogcatBytes;
+        }
+
+        @Override
+        public void testFailed(TestFailure status, TestIdentifier test, String trace) {
+            super.testFailed(status, test, trace);
+            // sleep a small amount of time to ensure test failure stack trace makes it into logcat
+            // capture
+            RunUtil.getDefault().sleep(10);
+            InputStreamSource logSource = mDevice.getLogcat(mNumLogcatBytes);
+            super.testLog(String.format("logcat-%s_%s", test.getClassName(), test.getTestName()),
+                    LogDataType.TEXT, logSource);
+            logSource.cancel();
+        }
+    }
+
+    /**
+     * A {@link ResultForwarder} that will forward a screenshot on test failures.
+     */
+    private static class FailedTestScreenshotGenerator extends ResultForwarder {
+        private ITestDevice mDevice;
+
+        public FailedTestScreenshotGenerator(ITestInvocationListener listener,
+                ITestDevice device) {
+            super(listener);
+            mDevice = device;
+        }
+
+        @Override
+        public void testFailed(TestFailure status, TestIdentifier test, String trace) {
+            super.testFailed(status, test, trace);
+
+            try {
+                InputStreamSource screenSource = mDevice.getScreenshot();
+                super.testLog(String.format("screenshot-%s_%s", test.getClassName(),
+                        test.getTestName()), LogDataType.PNG, screenSource);
+                screenSource.cancel();
+            } catch (DeviceNotAvailableException e) {
+                // TODO: rethrow this somehow
+                CLog.e("Device %s became unavailable while capturing screenshot, %s",
+                        mDevice.getSerialNumber(), e.toString());
+            }
         }
     }
 
@@ -337,6 +408,16 @@ public class CtsTest implements IDeviceTest, IResumableTest, IShardableTest, IBu
                     getDevice());
             listener = bugListener;
         }
+        if (mScreenshotOnFailures) {
+            FailedTestScreenshotGenerator screenListener = new FailedTestScreenshotGenerator(
+                    listener, getDevice());
+            listener = screenListener;
+        }
+        if (mLogcatOnFailures) {
+            FailedTestLogcatGenerator logcatListener = new FailedTestLogcatGenerator(
+                    listener, getDevice(), mMaxLogcatBytes);
+            listener = logcatListener;
+        }
 
         // collect and install the prerequisiteApks first, to save time when multiple test
         // packages are using the same prerequisite apk (I'm looking at you, CtsTestStubs!)
@@ -400,13 +481,17 @@ public class CtsTest implements IDeviceTest, IResumableTest, IShardableTest, IBu
         // reboot it before running it.
         // Also reboot after package which is know to leave pop-up behind
         final List<String> rebootAfterList = Arrays.asList(
-                "CtsMediaTestCases");
+                "CtsMediaTestCases",
+                "CtsAccessibilityTestCases");
         final List<String> rebootBeforeList = Arrays.asList(
                 "CtsAnimationTestCases",
                 "CtsGraphicsTestCases",
                 "CtsViewTestCases",
                 "CtsWidgetTestCases" );
         long intervalInMSec = mRebootIntervalMin * 60 * 1000;
+        if (mDevice.getSerialNumber().startsWith("emulator-")) {
+            return;
+        }
         if (!mDisableReboot) {
             long currentTime = System.currentTimeMillis();
             if (((currentTime - mPrevRebootTime) > intervalInMSec) ||
@@ -423,7 +508,7 @@ public class CtsTest implements IDeviceTest, IResumableTest, IShardableTest, IBu
     }
 
     private void rebootDevice() throws DeviceNotAvailableException {
-        final int TIMEOUT_MS = 4 * 60 * 1000;
+        final int TIMEOUT_MS = 10 * 60 * 1000;
         TestDeviceOptions options = mDevice.getOptions();
         // store default value and increase time-out for reboot
         int rebootTimeout = options.getRebootTimeout();

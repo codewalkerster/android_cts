@@ -245,12 +245,7 @@ public class CtsConsole extends Console {
         return mCtsBuild;
     }
 
-    public static void main(String[] args) throws InterruptedException {
-        // change to PTS mode before anything else
-        String ptsMode = System.getProperty("PTS");
-        if ((ptsMode != null) && ptsMode.equals("1")) {
-            CtsBuildHelper.changeToPtsMode();
-        }
+    public static void main(String[] args) throws InterruptedException, ConfigurationException {
         Console console = new CtsConsole();
         Console.startConsole(console, args);
     }

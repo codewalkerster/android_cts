@@ -30,7 +30,6 @@ cts_security_apps_list := \
 
 cts_support_packages := \
 	CtsAccelerationTestStubs \
-	CtsDelegatingAccessibilityService \
 	CtsDeviceAdmin \
 	CtsMonkeyApp \
 	CtsMonkeyApp2 \
@@ -38,7 +37,7 @@ cts_support_packages := \
 	CtsTestStubs \
 	SignatureTest \
 	TestDeviceSetup \
-        CtsUiAutomatorApp \
+	CtsUiAutomatorApp \
 	$(cts_security_apps_list)
 
 cts_external_packages := \
@@ -63,8 +62,10 @@ cts_test_packages := \
 	CtsCalendarcommon2TestCases \
 	CtsContentTestCases \
 	CtsDatabaseTestCases \
+	CtsDisplayTestCases \
 	CtsDpiTestCases \
 	CtsDpiTestCases2 \
+	CtsDreamsTestCases \
 	CtsDrmTestCases \
 	CtsEffectTestCases \
 	CtsExampleTestCases \
@@ -74,9 +75,11 @@ cts_test_packages := \
 	CtsHardwareTestCases \
 	CtsHoloTestCases \
 	CtsJniTestCases \
+	CtsKeystoreTestCases \
 	CtsLocationTestCases \
 	CtsMediaStressTestCases \
 	CtsMediaTestCases \
+	CtsNativeOpenGLTestCases \
 	CtsNdefTestCases \
 	CtsNetTestCases \
 	CtsOpenGLTestCases \
@@ -108,8 +111,10 @@ CTS_COVERAGE_TEST_CASE_LIST := \
 
 # Host side only tests
 cts_host_libraries := \
+	CtsAdbTests \
 	CtsAppSecurityTests \
 	CtsMonkeyTestCases
+
 
 # Native test executables that need to have associated test XMLs.
 cts_native_exes := \

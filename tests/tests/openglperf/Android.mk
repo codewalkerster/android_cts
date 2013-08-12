@@ -23,7 +23,9 @@ LOCAL_MODULE_PATH := $(TARGET_OUT_DATA_APPS)
 
 LOCAL_JAVA_LIBRARIES := android.test.runner
 
-LOCAL_STATIC_JAVA_LIBRARIES := ctstestrunner
+LOCAL_STATIC_JAVA_LIBRARIES := ctstestrunner ctsutil
+
+LOCAL_JNI_SHARED_LIBRARIES := libctsopenglperf_jni
 
 LOCAL_SRC_FILES := $(call all-java-files-under, src)
 
@@ -35,4 +37,4 @@ LOCAL_SDK_VERSION := current
 
 include $(BUILD_CTS_PACKAGE)
 
-#include $(call all-makefiles-under,$(LOCAL_PATH))
+include $(call all-makefiles-under,$(LOCAL_PATH))

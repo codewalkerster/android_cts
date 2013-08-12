@@ -22,4 +22,7 @@ LOCAL_MODULE_TAGS := optional
 LOCAL_MODULE_PATH := $(TARGET_OUT_DATA_APPS)
 # Don't delete META-INF from the core-tests jar
 LOCAL_DONT_DELETE_JAR_META_INF := true
+
+LOCAL_JNI_SHARED_LIBRARIES := libjavacoretests
+
 include $(BUILD_PACKAGE)

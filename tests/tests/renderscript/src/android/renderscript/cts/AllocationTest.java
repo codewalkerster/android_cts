@@ -28,7 +28,9 @@ import android.renderscript.Type;
 import android.renderscript.Type.Builder;
 import android.renderscript.Type.CubemapFace;
 
-public class AllocationTest extends RSBaseGraphics {
+import android.util.Log;
+
+public class AllocationTest extends RSBaseCompute {
 
     // Test power of two and non power of two, equal and non-equal sizes
     void createTypedHelper(Element e) {
@@ -188,10 +190,10 @@ public class AllocationTest extends RSBaseGraphics {
 
     void helperCreateFromBitmap(Bitmap B,
                                 Allocation.MipmapControl mc) {
-        for (int i = 0; i < 1; i++) {
-            for (int j = 0; j < 1; j++) {
-                for (int k = 0; k < 1; k++) {
-                    for (int l = 0; l < 1; l++) {
+        for (int i = 0; i <= 1; i++) {
+            for (int j = 0; j <= 1; j++) {
+                for (int k = 0; k <= 1; k++) {
+                    for (int l = 0; l <= 1; l++) {
                         int u = 0;
                         u |= (i * Allocation.USAGE_SCRIPT);
                         u |= (j * Allocation.USAGE_GRAPHICS_TEXTURE);
@@ -684,6 +686,101 @@ public class AllocationTest extends RSBaseGraphics {
             }
         }
     }
+
+    public void testCopyFromAllocation() {
+        int nElemsX = 256;
+        int nElemsY = 32;
+        Type.Builder b = new Type.Builder(mRS, Element.I8(mRS));
+        Type.Builder b2 = new Type.Builder(mRS, Element.I32(mRS));
+        Allocation srcA = Allocation.createTyped(mRS, b.setX(nElemsX).setY(nElemsY).create());
+        Allocation dstA = Allocation.createTyped(mRS, b.setX(nElemsX).setY(nElemsY).create());
+
+        // wrong dimensionality
+        Allocation srcB_bad = Allocation.createTyped(mRS, b.setX(nElemsX).setY(1).create());
+        Allocation srcC_bad = Allocation.createTyped(mRS, b.setX(nElemsY).setY(nElemsX).create());
+        Allocation srcD_bad = Allocation.createTyped(mRS, b.setX(nElemsX*2).setY(nElemsY*2).create());
+
+        // wrong element type
+        Allocation srcE_bad = Allocation.createTyped(mRS, b2.setX(nElemsX).setY(nElemsY).create());
+
+        try {
+            dstA.copyFrom(srcB_bad);
+            fail("should throw RSIllegalArgumentException");
+        } catch (RSIllegalArgumentException e) {
+        }
+
+        try {
+            dstA.copyFrom(srcC_bad);
+            fail("should throw RSIllegalArgumentException");
+        } catch (RSIllegalArgumentException e) {
+        }
+
+        try {
+            dstA.copyFrom(srcD_bad);
+            fail("should throw RSIllegalArgumentException");
+        } catch (RSIllegalArgumentException e) {
+        }
+
+        try {
+            dstA.copyFrom(srcE_bad);
+            fail("should throw RSIllegalArgumentException");
+        } catch (RSIllegalArgumentException e) {
+        }
+
+        dstA.copyFrom(srcA);
+
+    }
+
+    public void testSetElementAt() {
+        Type.Builder b = new Type.Builder(mRS, Element.I32(mRS));
+        Allocation largeArray = Allocation.createTyped(mRS, b.setX(48).create());
+        Allocation singleElement = Allocation.createTyped(mRS, b.setX(1).create());
+
+        ScriptC_setelementat script = new ScriptC_setelementat(mRS, mRes, R.raw.setelementat);
+
+        script.set_memset_toValue(1);
+        script.forEach_memset(singleElement);
+
+        script.set_dimX(48);
+        script.set_array(largeArray);
+
+        script.forEach_setLargeArray(singleElement);
+
+        int[] result = new int[1];
+
+        script.set_compare_value(10);
+        script.forEach_compare(largeArray);
+        script.forEach_getCompareResult(singleElement);
+        singleElement.copyTo(result);
+        assertTrue(result[0] == 2);
+    }
+
+    public void testSetElementAt2D() {
+        Type.Builder b = new Type.Builder(mRS, Element.I32(mRS));
+
+        Allocation singleElement = Allocation.createTyped(mRS, b.setX(1).create());
+        Allocation largeArray = Allocation.createTyped(mRS, b.setX(48).setY(16).create());
+
+        ScriptC_setelementat script = new ScriptC_setelementat(mRS, mRes, R.raw.setelementat);
+
+        script.set_memset_toValue(1);
+        script.forEach_memset(singleElement);
+
+        script.set_dimX(48);
+        script.set_dimY(16);
+        script.set_array(largeArray);
+
+        script.forEach_setLargeArray2D(singleElement);
+
+        int[] result = new int[1];
+
+        script.set_compare_value(10);
+        script.forEach_compare(largeArray);
+        script.forEach_getCompareResult(singleElement);
+        singleElement.copyTo(result);
+        assertTrue(result[0] == 2);
+    }
+
 }
 
 

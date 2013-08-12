@@ -66,6 +66,7 @@ public class LocationVerifier implements Handler.Callback {
     private long mLastPassiveTimestamp = -1;
     private int mNumActiveUpdates = 0;
     private int mNumPassiveUpdates = 0;
+    private boolean mIsMockProvider = false;
     private boolean mRunning = false;
     private boolean mActiveLocationArrive = false;
 
@@ -88,6 +89,11 @@ public class LocationVerifier implements Handler.Callback {
             if (mNumActiveUpdates <= NUM_IGNORED_UPDATES ) {
                 mCb.log("(ignored) active " + mProvider + " update (" + delta + "ms)");
                 return;
+            }
+            if (location.isFromMockProvider() != mIsMockProvider) {
+                fail("location coming from \"" + mProvider +
+                        "\" provider reports isFromMockProvider() to be " +
+                        location.isFromMockProvider());
             }
 
             mActiveDeltas.add(delta);
@@ -171,6 +177,11 @@ public class LocationVerifier implements Handler.Callback {
                 mCb.log("(ignored) passive " + mProvider + " update (" + delta + "ms)");
                 return;
             }
+            if (location.isFromMockProvider() != mIsMockProvider) {
+                fail("location coming from \"" + mProvider +
+                        "\" provider reports isFromMockProvider() to be " +
+                        location.isFromMockProvider());
+            }
 
             mPassiveDeltas.add(delta);
             mCb.log("passive " + mProvider + " update (" + delta + "ms)");
@@ -185,7 +196,7 @@ public class LocationVerifier implements Handler.Callback {
     }
 
     public LocationVerifier(PassFailLog cb, LocationManager locationManager,
-            String provider, long requestedInterval, int numUpdates) {
+            String provider, long requestedInterval, int numUpdates, boolean isMockProvider) {
         mProvider = provider;
         mInterval = requestedInterval;
         // timeout at 60 seconds after interval time
@@ -196,6 +207,7 @@ public class LocationVerifier implements Handler.Callback {
         mHandler = new Handler(this);
         mActiveListener = new ActiveListener();
         mPassiveListener = new PassiveListener();
+        mIsMockProvider = isMockProvider;
     }
 
     public void start() {

@@ -182,6 +182,15 @@ public class WebViewOnUiThread {
         });
     }
 
+    public void setNetworkAvailable(final boolean available) {
+        runOnUiThread(new Runnable() {
+            @Override
+            public void run() {
+                mWebView.setNetworkAvailable(available);
+            }
+        });
+    }
+
     public void setDownloadListener(final DownloadListener listener) {
         runOnUiThread(new Runnable() {
             @Override
@@ -337,6 +346,24 @@ public class WebViewOnUiThread {
             @Override
             public void run() {
                 mWebView.loadUrl(url);
+            }
+        });
+    }
+
+    public void loadUrl(final String url) {
+        runOnUiThread(new Runnable() {
+            @Override
+            public void run() {
+                mWebView.loadUrl(url);
+            }
+        });
+    }
+
+    public void stopLoading() {
+        runOnUiThread(new Runnable() {
+            @Override
+            public void run() {
+                mWebView.stopLoading();
             }
         });
     }
@@ -587,6 +614,15 @@ public class WebViewOnUiThread {
             @Override
             public Integer capture() {
                 return mWebView.findAll(find);
+            }
+        });
+    }
+
+    public Picture capturePicture() {
+        return getValue(new ValueGetter<Picture>() {
+            @Override
+            public Picture capture() {
+                return mWebView.capturePicture();
             }
         });
     }

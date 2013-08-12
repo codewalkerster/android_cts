@@ -45,14 +45,22 @@ public class MediaStore_Video_MediaTest extends AndroidTestCase {
     }
 
     public void testGetContentUri() {
-        assertNotNull(mContentResolver.query(Media.getContentUri("internal"), null, null, null,
+        Cursor c = null;
+        assertNotNull(c = mContentResolver.query(Media.getContentUri("internal"), null, null, null,
                 null));
-        assertNotNull(mContentResolver.query(Media.getContentUri("external"), null, null, null,
+        c.close();
+        assertNotNull(c = mContentResolver.query(Media.getContentUri("external"), null, null, null,
                 null));
+        c.close();
 
         // can not accept any other volume names
         String volume = "fakeVolume";
         assertNull(mContentResolver.query(Media.getContentUri(volume), null, null, null, null));
+    }
+
+    private void cleanExternalMediaFile(String path) {
+        mContentResolver.delete(Media.EXTERNAL_CONTENT_URI, "_data=?", new String[] { path });
+        new File(path).delete();
     }
 
     public void testStoreVideoMediaExternal() throws Exception {
@@ -60,6 +68,10 @@ public class MediaStore_Video_MediaTest extends AndroidTestCase {
                  "/video/testvideo.3gp";
         final String externalVideoPath2 = Environment.getExternalStorageDirectory().getPath() +
                 "/video/testvideo1.3gp";
+
+        // clean up any potential left over entries from a previous aborted run
+        cleanExternalMediaFile(externalVideoPath);
+        cleanExternalMediaFile(externalVideoPath2);
 
         int numBytes = 1337;
         File videoFile = new File(externalVideoPath);
@@ -180,6 +192,7 @@ public class MediaStore_Video_MediaTest extends AndroidTestCase {
         } finally {
             // delete
             assertEquals(1, mContentResolver.delete(uri, null, null));
+            new File(externalVideoPath).delete();
         }
 
         // check that the video file is removed when deleting the database entry

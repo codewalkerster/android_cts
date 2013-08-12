@@ -18,10 +18,10 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
       package="com.android.cts.verifier"
       android:versionCode="1"
-      android:versionName="4.2_r4">
+      android:versionName="4.3_r1">
 
     <!-- Using 10 for more complete NFC support... -->
-    <uses-sdk android:minSdkVersion="10"></uses-sdk>
+    <uses-sdk android:minSdkVersion="11"></uses-sdk>
 
     <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
     <uses-permission android:name="android.permission.ACCESS_WIFI_STATE" />
@@ -30,12 +30,14 @@
     <uses-permission android:name="android.permission.CAMERA" />
     <uses-permission android:name="android.permission.CHANGE_NETWORK_STATE" />
     <uses-permission android:name="android.permission.CHANGE_WIFI_STATE" />
+    <uses-permission android:name="android.permission.FULLSCREEN" />
     <uses-permission android:name="android.permission.INTERNET" />
     <uses-permission android:name="android.permission.NFC" />
     <uses-feature android:name="android.hardware.camera.front"
                   android:required="false" />
     <uses-feature android:name="android.hardware.camera.autofocus"
                   android:required="false" />
+    <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE" />
     <uses-permission android:name="android.permission.RECORD_AUDIO" />
     <uses-permission android:name="android.permission.WAKE_LOCK" />
     <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" />
@@ -300,7 +302,7 @@
 
             <meta-data android:name="test_required_features" android:value="android.hardware.camera.any"/>
         </activity>
-<!-- Experimental
+<!-- Experimental. If re-enabling, libcameraanalyzer must be included in the build
         <activity android:name=".camera.analyzer.CameraAnalyzerActivity"
                  android:label="@string/camera_analyzer"
                  android:screenOrientation="landscape">
@@ -341,6 +343,30 @@
             <meta-data android:name="test_required_features" android:value="android.hardware.camera.any"/>
         </activity>
 
+        <activity
+            android:name=".camera.fov.PhotoCaptureActivity"
+            android:label="@string/camera_fov_calibration"
+            android:screenOrientation="landscape"
+            android:theme="@android:style/Theme.Holo.NoActionBar.Fullscreen" >
+            <intent-filter android:label="@string/camera_fov_calibration" >
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.cts.intent.category.MANUAL_TEST" />
+            </intent-filter>
+            <meta-data android:name="test_category" android:value="@string/test_category_camera" />
+            <meta-data android:name="test_required_features" android:value="android.hardware.sensor.gyroscope" />
+            <meta-data android:name="test_required_features" android:value="android.hardware.camera.any"/>
+        </activity>
+        <activity
+            android:name=".camera.fov.DetermineFovActivity"
+            android:label="@string/camera_fov_calibration"
+            android:screenOrientation="landscape"
+            android:theme="@android:style/Theme.Holo.NoActionBar.Fullscreen" >
+        </activity>
+        <activity
+            android:name=".camera.fov.CalibrationPreferenceActivity"
+            android:label="@string/camera_fov_label_options" >
+        </activity>
+
         <activity android:name=".usb.UsbAccessoryTestActivity"
                 android:label="@string/usb_accessory_test"
                 android:configChanges="keyboardHidden|orientation|screenSize">
@@ -362,7 +388,27 @@
             <meta-data android:name="test_category" android:value="@string/test_category_networking" />
             <meta-data android:name="test_required_features" android:value="android.hardware.wifi.direct" />
         </activity>
+        
+        <activity android:name=".nls.NotificationListenerVerifierActivity"
+                android:label="@string/nls_test">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.cts.intent.category.MANUAL_TEST" />
+            </intent-filter>
+            <meta-data android:name="test_category" android:value="@string/test_category_notifications" />
+        </activity>
 
+        <service android:name=".nls.MockListener"
+                 android:exported="true"
+                 android:label="@string/nls_service_name"
+                 android:permission="android.permission.BIND_NOTIFICATION_LISTENER_SERVICE">
+            <intent-filter>
+                <action android:name="android.service.notification.NotificationListenerService" />
+            </intent-filter>
+        </service>
+        
+        <service  android:name="nls.NotificationListenerVerifierActivity$DismissService"/>
+        
         <activity android:name=".p2p.GoNegRequesterTestListActivity"
                 android:label="@string/p2p_go_neg_requester"
                 android:configChanges="keyboardHidden|orientation|screenSize" />
@@ -406,6 +452,29 @@
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity-alias>
+
+        <activity android:name=".widget.WidgetTestActivity"
+                android:label="@string/widget_framework_test">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.cts.intent.category.MANUAL_TEST" />
+            </intent-filter>
+            <meta-data android:name="test_category" android:value="@string/test_category_other" />
+        </activity>
+
+        <receiver android:name=".widget.WidgetCtsProvider">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+            <!-- This specifies the widget provider info -->
+            <meta-data android:name="android.appwidget.provider"
+                    android:resource="@xml/widget_info" />
+        </receiver>
+
+        <!-- The service serving the RemoteViews to the collection widget -->
+        <service android:name=".widget.WidgetCtsService"
+            android:permission="android.permission.BIND_REMOTEVIEWS"
+            android:exported="false" />
 
    </application>
 

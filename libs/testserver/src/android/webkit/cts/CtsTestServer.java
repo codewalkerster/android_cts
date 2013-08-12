@@ -67,7 +67,9 @@ import java.security.cert.X509Certificate;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.Hashtable;
+import java.util.Iterator;
 import java.util.List;
+import java.util.Vector;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -129,9 +131,8 @@ public class CtsTestServer {
     private Resources mResources;
     private boolean mSsl;
     private MimeTypeMap mMap;
-    private String mLastQuery;
+    private Vector<String> mQueries;
     private ArrayList<HttpEntity> mRequestEntities;
-    private int mRequestCount;
     private long mDocValidity;
     private long mDocAge;
 
@@ -168,6 +169,7 @@ public class CtsTestServer {
         mSsl = ssl;
         mRequestEntities = new ArrayList<HttpEntity>();
         mMap = MimeTypeMap.getSingleton();
+        mQueries = new Vector<String>();
         mServerThread = new ServerThread(this, mSsl);
         if (mSsl) {
             mServerUri = "https://localhost:" + mServerThread.mSocket.getLocalPort();
@@ -379,8 +381,21 @@ public class CtsTestServer {
                 .toString();
     }
 
-    public synchronized String getLastRequestUrl() {
-        return mLastQuery;
+    /**
+     * Returns true if the resource identified by url has been requested since
+     * the server was started or the last call to resetRequestState().
+     *
+     * @param url The relative url to check whether it has been requested.
+     */
+    public synchronized boolean wasResourceRequested(String url) {
+        Iterator<String> it = mQueries.iterator();
+        while (it.hasNext()) {
+            String request = it.next();
+            if (request.endsWith(url)) {
+                return true;
+            }
+        }
+        return false;
     }
 
     /**
@@ -391,7 +406,7 @@ public class CtsTestServer {
     }
 
     public synchronized int getRequestCount() {
-        return mRequestCount;
+        return mQueries.size();
     }
 
     /**
@@ -417,9 +432,17 @@ public class CtsTestServer {
      */
     public synchronized void resetRequestState() {
 
-        mRequestCount = 0;
-        mLastQuery = null;
+        mQueries.clear();
         mRequestEntities = new ArrayList<HttpEntity>();
+    }
+
+    /**
+     * Hook for adding stuffs for HTTP POST. Default implementation does nothing.
+     * @return null to use the default response mechanism of sending the requested uri as it is.
+     *         Otherwise, the whole response should be handled inside onPost.
+     */
+    protected HttpResponse onPost(HttpRequest request) throws Exception {
+        return null;
     }
 
     /**
@@ -427,17 +450,23 @@ public class CtsTestServer {
      * @throws InterruptedException
      * @throws IOException
      */
-    private HttpResponse getResponse(HttpRequest request) throws InterruptedException, IOException {
+    private HttpResponse getResponse(HttpRequest request) throws Exception {
         RequestLine requestLine = request.getRequestLine();
         HttpResponse response = null;
         String uriString = requestLine.getUri();
         Log.i(TAG, requestLine.getMethod() + ": " + uriString);
 
         synchronized (this) {
-            mRequestCount += 1;
-            mLastQuery = uriString;
+            mQueries.add(uriString);
             if (request instanceof HttpEntityEnclosingRequest) {
                 mRequestEntities.add(((HttpEntityEnclosingRequest)request).getEntity());
+            }
+        }
+
+        if (requestLine.getMethod().equals("POST")) {
+            HttpResponse responseOnPost = onPost(request);
+            if (responseOnPost != null) {
+                return responseOnPost;
             }
         }
 
@@ -544,12 +573,11 @@ public class CtsTestServer {
             Header[] cookies = request.getHeaders("Cookie");
             Pattern p = Pattern.compile("count=(\\d+)");
             StringBuilder cookieString = new StringBuilder(100);
+            cookieString.append(cookies.length);
             int count = 0;
             for (Header cookie : cookies) {
+                cookieString.append("|");
                 String value = cookie.getValue();
-                if (cookieString.length() > 0) {
-                    cookieString.append("|");
-                }
                 cookieString.append(value);
                 Matcher m = p.matcher(value);
                 if (m.find()) {
@@ -864,7 +892,7 @@ public class CtsTestServer {
             }
 
             @Override
-            public Void call() throws IOException, InterruptedException, HttpException {
+            public Void call() throws Exception {
                 HttpResponse response = mServer.getResponse(mRequest);
                 mConnection.sendResponseHeader(response);
                 mConnection.sendResponseEntity(response);

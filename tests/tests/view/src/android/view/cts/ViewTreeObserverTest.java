@@ -35,7 +35,6 @@ import android.view.ViewTreeObserver.OnScrollChangedListener;
 import android.view.ViewTreeObserver.OnTouchModeChangeListener;
 import android.widget.Button;
 import android.widget.LinearLayout;
-import android.widget.ListView;
 import android.widget.ScrollView;
 
 public class ViewTreeObserverTest extends ActivityInstrumentationTestCase2<MockActivity> {
@@ -49,6 +48,12 @@ public class ViewTreeObserverTest extends ActivityInstrumentationTestCase2<MockA
         super.setUp();
         mViewTreeObserver = null;
         mActivity = getActivity();
+        new PollingCheck() {
+            @Override
+                protected boolean check() {
+                return mActivity.hasWindowFocus();
+            }
+        }.run();
         mInstrumentation = getInstrumentation();
         layout(R.layout.viewtreeobserver_layout);
     }
@@ -69,8 +74,15 @@ public class ViewTreeObserverTest extends ActivityInstrumentationTestCase2<MockA
 
     public void testAddOnGlobalFocusChangeListener() {
         final LinearLayout layout = (LinearLayout) mActivity.findViewById(R.id.linearlayout);
-        final ListView lv1 = (ListView) mActivity.findViewById(R.id.listview1);
-        final ListView lv2 = (ListView) mActivity.findViewById(R.id.listview2);
+        final View view1 = mActivity.findViewById(R.id.view1);
+        final View view2 = mActivity.findViewById(R.id.view2);
+
+        mInstrumentation.runOnMainSync(new Runnable() {
+            @Override
+            public void run() {
+                view1.requestFocus();
+            }
+        });
 
         mViewTreeObserver = layout.getViewTreeObserver();
         final MockOnGlobalFocusChangeListener listener = new MockOnGlobalFocusChangeListener();
@@ -80,14 +92,15 @@ public class ViewTreeObserverTest extends ActivityInstrumentationTestCase2<MockA
         mInstrumentation.runOnMainSync(new Runnable() {
             @Override
             public void run() {
-                layout.requestChildFocus(lv1, lv2);
+                view2.requestFocus();
             }
         });
         mInstrumentation.waitForIdleSync();
         new PollingCheck() {
             @Override
             protected boolean check() {
-                return listener.hasCalledOnGlobalFocusChanged();
+                return listener.hasCalledOnGlobalFocusChanged()
+                        && listener.oldFocus == view1 && listener.newFocus == view2;
             }
         }.run();
     }
@@ -144,16 +157,16 @@ public class ViewTreeObserverTest extends ActivityInstrumentationTestCase2<MockA
     }
 
     public void testAddOnComputeInternalInsetsListener() {
-        final ListView lv1 = (ListView) mActivity.findViewById(R.id.listview1);
-        mViewTreeObserver = lv1.getViewTreeObserver();
+        final View view1 = mActivity.findViewById(R.id.view1);
+        mViewTreeObserver = view1.getViewTreeObserver();
 
         MockOnComputeInternalInsetsListener listener = new MockOnComputeInternalInsetsListener();
         mViewTreeObserver.addOnComputeInternalInsetsListener(listener);
     }
 
     public void testRemoveOnComputeInternalInsetsListener() {
-        final ListView lv1 = (ListView) mActivity.findViewById(R.id.listview1);
-        mViewTreeObserver = lv1.getViewTreeObserver();
+        final View view1 = mActivity.findViewById(R.id.view1);
+        mViewTreeObserver = view1.getViewTreeObserver();
 
         MockOnComputeInternalInsetsListener listener = new MockOnComputeInternalInsetsListener();
         mViewTreeObserver.removeOnComputeInternalInsetsListener(listener);
@@ -207,8 +220,15 @@ public class ViewTreeObserverTest extends ActivityInstrumentationTestCase2<MockA
 
     public void testRemoveOnGlobalFocusChangeListener() {
         final LinearLayout layout = (LinearLayout) mActivity.findViewById(R.id.linearlayout);
-        final ListView lv1 = (ListView) mActivity.findViewById(R.id.listview1);
-        final ListView lv2 = (ListView) mActivity.findViewById(R.id.listview2);
+        final View view1 = mActivity.findViewById(R.id.view1);
+        final View view2 = mActivity.findViewById(R.id.view2);
+
+        mInstrumentation.runOnMainSync(new Runnable() {
+            @Override
+            public void run() {
+                view1.requestFocus();
+            }
+        });
 
         mViewTreeObserver = layout.getViewTreeObserver();
         final MockOnGlobalFocusChangeListener listener = new MockOnGlobalFocusChangeListener();
@@ -217,14 +237,15 @@ public class ViewTreeObserverTest extends ActivityInstrumentationTestCase2<MockA
         mInstrumentation.runOnMainSync(new Runnable() {
             @Override
             public void run() {
-                layout.requestChildFocus(lv1, lv2);
+                view2.requestFocus();
             }
         });
         mInstrumentation.waitForIdleSync();
         new PollingCheck() {
             @Override
             protected boolean check() {
-                return listener.hasCalledOnGlobalFocusChanged();
+                return listener.hasCalledOnGlobalFocusChanged()
+                        && listener.oldFocus == view1 && listener.newFocus == view2;
             }
         }.run();
 
@@ -234,7 +255,7 @@ public class ViewTreeObserverTest extends ActivityInstrumentationTestCase2<MockA
         mInstrumentation.runOnMainSync(new Runnable() {
             @Override
             public void run() {
-                layout.requestChildFocus(lv1, lv2);
+                view1.requestFocus();
             }
         });
         mInstrumentation.waitForIdleSync();
@@ -345,10 +366,14 @@ public class ViewTreeObserverTest extends ActivityInstrumentationTestCase2<MockA
 
     private class MockOnGlobalFocusChangeListener implements OnGlobalFocusChangeListener {
         private boolean mCalledOnGlobalFocusChanged = false;
+        View oldFocus;
+        View newFocus;
 
         @Override
         public void onGlobalFocusChanged(View oldFocus, View newFocus) {
             mCalledOnGlobalFocusChanged = true;
+            this.oldFocus = oldFocus;
+            this.newFocus = newFocus;
         }
 
         public boolean hasCalledOnGlobalFocusChanged() {
@@ -357,6 +382,8 @@ public class ViewTreeObserverTest extends ActivityInstrumentationTestCase2<MockA
 
         public void reset() {
             mCalledOnGlobalFocusChanged = false;
+            oldFocus = null;
+            newFocus = null;
         }
     }
 

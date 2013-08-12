@@ -25,7 +25,8 @@ LOCAL_SRC_FILES := $(call all-java-files-under, src)
 
 LOCAL_PACKAGE_NAME := CtsVerifier
 
-LOCAL_JNI_SHARED_LIBRARIES := libctsverifier_jni libcameraanalyzer
+LOCAL_JNI_SHARED_LIBRARIES := libctsverifier_jni \
+	#libcameraanalyzer # Needed for the disabled CameraAnalyzer tests
 
 LOCAL_PROGUARD_FLAG_FILES := proguard.flags
 
@@ -36,7 +37,7 @@ include $(BUILD_PACKAGE)
 # Builds and launches CTS Verifier on a device.
 .PHONY: cts-verifier
 cts-verifier: CtsVerifier adb
-	adb install -r $(ANDROID_PRODUCT_OUT)/data/app/CtsVerifier.apk \
+	adb install -r $(PRODUCT_OUT)/data/app/CtsVerifier.apk \
 		&& adb shell "am start -n com.android.cts.verifier/.CtsVerifierActivity"
 
 #
