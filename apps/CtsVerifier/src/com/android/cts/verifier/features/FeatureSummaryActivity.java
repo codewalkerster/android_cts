@@ -154,7 +154,7 @@ public class FeatureSummaryActivity extends PassFailButtons.ListActivity {
 
     public static final Feature[] ALL_HONEYCOMB_MR1_FEATURES = {
             new Feature("android.hardware.usb.host", false),
-            new Feature("android.hardware.usb.accessory", true),
+            new Feature("android.hardware.usb.accessory", false),
     };
 
     public static final Feature[] ALL_HONEYCOMB_MR2_FEATURES = {
@@ -170,6 +170,14 @@ public class FeatureSummaryActivity extends PassFailButtons.ListActivity {
 
     public static final Feature[] ALL_JELLY_BEAN_FEATURES = {
             new Feature(PackageManager.FEATURE_TELEVISION, false),
+    };
+
+    public static final Feature[] ALL_JELLY_BEAN_MR2_FEATURES = {
+            new Feature("android.software.app_widgets", false),
+            new Feature("android.software.input_methods", false),
+            new Feature("android.software.home_screen", false),
+            new Feature("android.hardware.bluetooth_le", false),
+            new Feature("android.hardware.camera.any", false),
     };
 
     @Override
@@ -202,6 +210,9 @@ public class FeatureSummaryActivity extends PassFailButtons.ListActivity {
 
         // add features from latest to last so that the latest requirements are put in the set first
         int apiVersion = Build.VERSION.SDK_INT;
+        if (apiVersion >= Build.VERSION_CODES.JELLY_BEAN_MR2) {
+            Collections.addAll(features, ALL_JELLY_BEAN_MR2_FEATURES);
+        }
         if (apiVersion >= Build.VERSION_CODES.JELLY_BEAN) {
             Collections.addAll(features, ALL_JELLY_BEAN_FEATURES);
         }

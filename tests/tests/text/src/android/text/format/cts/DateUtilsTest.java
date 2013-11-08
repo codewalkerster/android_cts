@@ -162,8 +162,7 @@ public class DateUtilsTest extends AndroidTestCase {
         assertEquals(expected, sb.toString());
     }
 
-    @SuppressWarnings("deprecation")
-    public void testFormatMethods() {
+    public void testFormatSameDayTime() {
         if (!LocaleUtils.isCurrentLocale(mContext, Locale.US)) {
             return;
         }
@@ -199,90 +198,26 @@ public class DateUtilsTest extends AndroidTestCase {
                 fixedTime, java.text.DateFormat.FULL, java.text.DateFormat.MEDIUM));
         assertEquals("5:30 AM", DateUtils.formatSameDayTime(fixedTime + HOUR_DURATION,
                 fixedTime, java.text.DateFormat.FULL, java.text.DateFormat.SHORT));
+    }
 
-        long noonDuration = (8 * 60 + 30) * 60 * 1000 - 15 * 1000;
-        long midnightDuration = (3 * 60 + 30) * 60 * 1000 + 15 * 1000;
-        long integralDuration = 30 * 60 * 1000 + 15 * 1000;
-        assertEquals("Monday", DateUtils.formatDateRange(mContext, fixedTime, fixedTime
-                + HOUR_DURATION, DateUtils.FORMAT_SHOW_WEEKDAY));
-        assertEquals("January 19", DateUtils.formatDateRange(mContext, timeWithCurrentYear,
-                timeWithCurrentYear + HOUR_DURATION, DateUtils.FORMAT_SHOW_DATE));
-        assertEquals("3:30AM", DateUtils.formatDateRange(mContext, fixedTime, fixedTime,
-                DateUtils.FORMAT_SHOW_TIME));
-        assertEquals("January 19, 2009", DateUtils.formatDateRange(mContext, fixedTime,
-                fixedTime + HOUR_DURATION, DateUtils.FORMAT_SHOW_YEAR));
-        assertEquals("January 19", DateUtils.formatDateRange(mContext, timeWithCurrentYear,
-                timeWithCurrentYear + HOUR_DURATION, DateUtils.FORMAT_NO_YEAR));
-        assertEquals("January", DateUtils.formatDateRange(mContext, timeWithCurrentYear,
-                timeWithCurrentYear + HOUR_DURATION, DateUtils.FORMAT_NO_MONTH_DAY));
-        assertEquals("3:30AM", DateUtils.formatDateRange(mContext, fixedTime, fixedTime,
-                DateUtils.FORMAT_12HOUR | DateUtils.FORMAT_SHOW_TIME));
-        assertEquals("03:30", DateUtils.formatDateRange(mContext, fixedTime, fixedTime,
-                DateUtils.FORMAT_24HOUR | DateUtils.FORMAT_SHOW_TIME));
-        assertEquals("3:30AM", DateUtils.formatDateRange(mContext, fixedTime, fixedTime,
-                DateUtils.FORMAT_12HOUR | DateUtils.FORMAT_CAP_AMPM | DateUtils.FORMAT_SHOW_TIME));
-        assertEquals("noon", DateUtils.formatDateRange(mContext, fixedTime + noonDuration,
-                fixedTime + noonDuration, DateUtils.FORMAT_12HOUR | DateUtils.FORMAT_SHOW_TIME));
-        assertEquals("Noon", DateUtils.formatDateRange(mContext, fixedTime + noonDuration,
-                fixedTime + noonDuration,
-                DateUtils.FORMAT_12HOUR | DateUtils.FORMAT_SHOW_TIME | DateUtils.FORMAT_CAP_NOON));
-        assertEquals("12:00PM", DateUtils.formatDateRange(mContext, fixedTime + noonDuration,
-                fixedTime + noonDuration,
-                DateUtils.FORMAT_12HOUR | DateUtils.FORMAT_NO_NOON | DateUtils.FORMAT_SHOW_TIME));
-        assertEquals("12:00AM", DateUtils.formatDateRange(mContext, fixedTime - midnightDuration,
-                fixedTime - midnightDuration,
-                DateUtils.FORMAT_12HOUR | DateUtils.FORMAT_SHOW_TIME
-                | DateUtils.FORMAT_NO_MIDNIGHT));
-        assertEquals("3:30AM", DateUtils.formatDateRange(mContext, fixedTime, fixedTime,
-                DateUtils.FORMAT_SHOW_TIME | DateUtils.FORMAT_UTC));
-        assertEquals("3am", DateUtils.formatDateRange(mContext, fixedTime - integralDuration,
-                fixedTime - integralDuration,
-                DateUtils.FORMAT_SHOW_TIME | DateUtils.FORMAT_ABBREV_TIME));
-        assertEquals("Mon", DateUtils.formatDateRange(mContext, fixedTime,
-                fixedTime + HOUR_DURATION,
-                DateUtils.FORMAT_SHOW_WEEKDAY | DateUtils.FORMAT_ABBREV_WEEKDAY));
-        assertEquals("Jan 19", DateUtils.formatDateRange(mContext, timeWithCurrentYear,
-                timeWithCurrentYear + HOUR_DURATION,
-                DateUtils.FORMAT_SHOW_DATE | DateUtils.FORMAT_ABBREV_MONTH));
-        assertEquals("Jan 19", DateUtils.formatDateRange(mContext, timeWithCurrentYear,
-                timeWithCurrentYear + HOUR_DURATION,
-                DateUtils.FORMAT_SHOW_DATE | DateUtils.FORMAT_ABBREV_ALL));
-        String actual = DateUtils.formatDateRange(mContext, fixedTime,
-                fixedTime + HOUR_DURATION,
-                DateUtils.FORMAT_SHOW_YEAR | DateUtils.FORMAT_NUMERIC_DATE);
-        // accept with leading zero or without
-        assertTrue("1/19/2009".equals(actual) || "01/19/2009".equals(actual));
+    // This is just to exercise the wrapper that calls the libcore/icu4c implementation.
+    // Full testing, in multiple locales, is in libcore's CTS tests.
+    public void testFormatDateRange() {
+        if (!LocaleUtils.isCurrentLocale(mContext, Locale.US)) {
+            return;
+        }
+
+        Date date = new Date(109, 0, 19, 3, 30, 15);
+        long fixedTime = date.getTime();
+        final long HOUR_DURATION = 2 * 60 * 60 * 1000;
+        assertEquals("Monday", DateUtils.formatDateRange(mContext, fixedTime,
+                     fixedTime + HOUR_DURATION, DateUtils.FORMAT_SHOW_WEEKDAY));
     }
 
     public void testIsToday() {
         final long ONE_DAY_IN_MS = 24 * 60 * 60 * 1000;
         assertTrue(DateUtils.isToday(mBaseTime));
         assertFalse(DateUtils.isToday(mBaseTime - ONE_DAY_IN_MS));
-    }
-
-    /**
-     * DateUtils used to use Time rather than Calendar, which is broken
-     * because Time uses a 32-bit time_t rather than Calendar's 64-bit Java long.
-     * http://code.google.com/p/android/issues/detail?id=13050
-     */
-    public void test2038() {
-        assertEquals("00:00, Thursday, January 1, 1970", formatFull(0L));
-        assertEquals("17:31, Sunday, November 24, 1833",
-                     formatFull(((long) Integer.MIN_VALUE + Integer.MIN_VALUE) * 1000L));
-        assertEquals("20:45, Friday, December 13, 1901", formatFull(Integer.MIN_VALUE * 1000L));
-        assertEquals("03:14, Tuesday, January 19, 2038", formatFull(Integer.MAX_VALUE * 1000L));
-        assertEquals("06:28, Sunday, February 7, 2106",
-                     formatFull((2L + Integer.MAX_VALUE + Integer.MAX_VALUE) * 1000L));
-    }
-
-    private String formatFull(long millis) {
-        Formatter formatter = new Formatter();
-        int flags = DateUtils.FORMAT_SHOW_DATE
-                | DateUtils.FORMAT_SHOW_WEEKDAY
-                | DateUtils.FORMAT_SHOW_TIME
-                | DateUtils.FORMAT_24HOUR;
-        DateUtils.formatDateRange(null, formatter, millis, millis, flags, "UTC");
-        return formatter.toString();
     }
 
     public void test_bug_7548161() {
