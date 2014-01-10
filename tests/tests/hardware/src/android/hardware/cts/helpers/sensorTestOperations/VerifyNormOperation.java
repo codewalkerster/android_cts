@@ -1,5 +1,5 @@
 /*
- * Copyri The Android Open Source Project
+ * Copyright (C) 2013 The Android Open Source Project
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,13 +16,15 @@
 
 package android.hardware.cts.helpers.sensorTestOperations;
 
+import junit.framework.Assert;
+
+import android.content.Context;
+
 import android.hardware.cts.helpers.SensorCtsHelper;
 import android.hardware.cts.helpers.SensorManagerTestVerifier;
 import android.hardware.cts.helpers.SensorTestInformation;
 import android.hardware.cts.helpers.SensorTestOperation;
 import android.hardware.cts.helpers.TestSensorEvent;
-
-import android.test.AndroidTestCase;
 
 /**
  * Test Operation class that validates the norm of a given sensor.
@@ -35,18 +37,18 @@ public class VerifyNormOperation extends SensorTestOperation {
     private double mThreshold;
 
     public VerifyNormOperation(
-            AndroidTestCase testCase,
+            Context context,
             int sensorType,
             int samplingRateInUs,
             float referenceValue,
             float threshold) {
         mSensor = new SensorManagerTestVerifier(
-                testCase,
+                context,
                 sensorType,
                 samplingRateInUs,
                 0 /*reportLatencyInUs*/);
         // set expectations
-        mAxisCount = SensorTestInformation.getAxisCount(mSensor.getUnderlyingType());
+        mAxisCount = SensorTestInformation.getAxisCount(mSensor.getUnderlyingSensor().getType());
         mReferenceValue = referenceValue;
         mThreshold = threshold;
     }
@@ -75,6 +77,6 @@ public class VerifyNormOperation extends SensorTestOperation {
                 mThreshold,
                 norm,
                 valuesBuilder.toString());
-        mSensor.verifier().assertTrue(message, Math.abs(mReferenceValue - norm) <= mThreshold);
+        Assert.assertTrue(message, Math.abs(mReferenceValue - norm) <= mThreshold);
     }
 }

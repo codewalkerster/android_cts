@@ -22,8 +22,6 @@ import android.hardware.SensorManager;
 
 import android.os.Environment;
 
-import android.test.AndroidTestCase;
-
 import android.util.Log;
 
 import java.io.DataOutputStream;
@@ -63,7 +61,20 @@ public class SensorCtsHelper {
         return arrayCopy.get(arrayIndex);
     }
 
-    // TODO: are there any internal libraries for this?
+    /**
+     * Calculates the mean for each of the values in the set of TestSensorEvents.
+     */
+    public static void getMeans(TestSensorEvent events[], double means[]) {
+        for(TestSensorEvent event : events) {
+            for(int i = 0; i < means.length; ++i) {
+                means[i] += event.values[i];
+            }
+        }
+        for(int i = 0; i < means.length; ++i) {
+            means[i] /= events.length;
+        }
+    }
+
     public static <TValue extends Number> double getMean(Collection<TValue> collection) {
         validateCollection(collection);
 
@@ -146,7 +157,7 @@ public class SensorCtsHelper {
      *      . android.permission.READ_LOGS
      *      . android.permission.DUMP
      */
-    public static void collectBugreport(String collectorId)
+    public static String collectBugreport(String collectorId)
             throws IOException, InterruptedException {
         String commands[] = new String[] {
                 "dumpstate",
@@ -158,8 +169,8 @@ public class SensorCtsHelper {
         SimpleDateFormat dateFormat = new SimpleDateFormat("M-d-y_H:m:s.S");
         String outputFile = String.format(
                 "%s/%s_%s",
-                collectorId,
                 Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS),
+                collectorId,
                 dateFormat.format(new Date()));
 
         DataOutputStream processOutput = null;
@@ -182,12 +193,16 @@ public class SensorCtsHelper {
                 } catch(IOException e) {}
             }
         }
+
+        return outputFile;
     }
 
-    public static Sensor getSensor(AndroidTestCase testCase, int sensorType) {
-        SensorManager sensorManager = (SensorManager)testCase.getContext().getSystemService(
+    public static Sensor getSensor(Context context, int sensorType) {
+        SensorManager sensorManager = (SensorManager)context.getSystemService(
                 Context.SENSOR_SERVICE);
-        testCase.assertNotNull(sensorManager);
+        if(sensorManager == null) {
+            throw new IllegalStateException("SensorService is not present in the system.");
+        }
         Sensor sensor = sensorManager.getDefaultSensor(sensorType);
         if(sensor == null) {
             throw new SensorNotSupportedException(sensorType);

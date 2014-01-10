@@ -16,6 +16,10 @@
 
 package android.hardware.cts.helpers;
 
+import junit.framework.Assert;
+
+import java.util.concurrent.TimeUnit;
+
 /**
  * Base test class that supports a basic test operation performed in a sensor.
  * The class follows a command patter as a base for its work.
@@ -28,7 +32,8 @@ public abstract class SensorTestOperation {
     private final SensorTestExceptionHandler mExceptionHandler = new SensorTestExceptionHandler();
 
     protected final String LOG_TAG = "TestRunner";
-    protected final int WAIT_TIMEOUT_IN_MILLISECONDS = 30 * 1000;
+    protected final long WAIT_TIMEOUT_IN_MILLISECONDS =
+            TimeUnit.MILLISECONDS.convert(5, TimeUnit.MINUTES);
 
     private Thread mThread;
 
@@ -65,6 +70,16 @@ public abstract class SensorTestOperation {
             return;
         }
         mThread.join(WAIT_TIMEOUT_IN_MILLISECONDS);
+        if(mThread.isAlive()) {
+            // the test is hung so collect the state of the system and fail
+            String operationName = this.getClass().getSimpleName();
+            String message = String.format(
+                    "%s hung. %s. BugReport collected at: %s",
+                    operationName,
+                    this.toString(),
+                    SensorCtsHelper.collectBugreport(operationName));
+            Assert.fail(message);
+        }
         mThread = null;
         mExceptionHandler.rethrow();
     }
