@@ -651,6 +651,66 @@ public class WebViewTest extends ActivityInstrumentationTestCase2<WebViewStubAct
         assertEquals("removedObject", resultObject.getResult());
     }
 
+    public void testJavascriptInterfaceCustomPropertiesClearedOnReload() throws Exception {
+        mOnUiThread.getSettings().setJavaScriptEnabled(true);
+
+        class DummyJavaScriptInterface {
+        }
+        final DummyJavaScriptInterface obj = new DummyJavaScriptInterface();
+        mOnUiThread.addJavascriptInterface(obj, "dummy");
+        mOnUiThread.loadUrlAndWaitForCompletion("about:blank");
+
+        EvaluateJsResultPollingCheck jsResult;
+        jsResult = new EvaluateJsResultPollingCheck("42");
+        mOnUiThread.evaluateJavascript("dummy.custom_property = 42", jsResult);
+        jsResult.run();
+        jsResult = new EvaluateJsResultPollingCheck("true");
+        mOnUiThread.evaluateJavascript("'custom_property' in dummy", jsResult);
+        jsResult.run();
+
+        mOnUiThread.reload();
+
+        jsResult = new EvaluateJsResultPollingCheck("false");
+        mOnUiThread.evaluateJavascript("'custom_property' in dummy", jsResult);
+        jsResult.run();
+    }
+
+    private final class TestPictureListener implements PictureListener {
+        public int callCount;
+
+        @Override
+        public void onNewPicture(WebView view, Picture picture) {
+            // Need to inform the listener tracking new picture
+            // for the "page loaded" knowledge since it has been replaced.
+            mOnUiThread.onNewPicture();
+            this.callCount += 1;
+        }
+    }
+
+    private Picture waitForPictureToHaveColor(int color,
+            final TestPictureListener listener) throws Throwable {
+        final int MAX_ON_NEW_PICTURE_ITERATIONS = 5;
+        final AtomicReference<Picture> pictureRef = new AtomicReference<Picture>();
+        for (int i = 0; i < MAX_ON_NEW_PICTURE_ITERATIONS; i++) {
+            final int oldCallCount = listener.callCount;
+            runTestOnUiThread(new Runnable() {
+                @Override
+                public void run() {
+                    pictureRef.set(mWebView.capturePicture());
+                }
+            });
+            if (isPictureFilledWithColor(pictureRef.get(), color))
+                break;
+            new PollingCheck(TEST_TIMEOUT) {
+                @Override
+                protected boolean check() {
+                    return listener.callCount > oldCallCount;
+                }
+            }.run();
+        }
+        return pictureRef.get();
+    }
+
     public void testCapturePicture() throws Exception, Throwable {
         startWebServer(false);
         final String url = mWebServer.getAssetUrl(TestHtmlConstants.BLANK_PAGE_URL);
