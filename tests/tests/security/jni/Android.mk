@@ -32,7 +32,10 @@ LOCAL_SRC_FILES := \
 		android_security_cts_SELinuxTest.cpp \
 		android_security_cts_MMapExecutableTest.cpp \
 		android_security_cts_NetlinkSocket.cpp \
-		android_security_cts_AudioPolicyBinderTest.cpp
+		android_security_cts_AudioPolicyBinderTest.cpp \
+		android_security_cts_AudioFlingerBinderTest.cpp \
+		android_security_cts_MediaPlayerInfoLeakTest.cpp \
+		android_security_cts_AudioEffectBinderTest.cpp
 
 LOCAL_C_INCLUDES := $(JNI_H_INCLUDE)
 
