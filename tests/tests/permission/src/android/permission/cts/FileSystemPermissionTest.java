@@ -443,6 +443,8 @@ public class FileSystemPermissionTest extends AndroidTestCase {
                     "/data/local/tmp/com.nuance.android.vsuite.vsuiteapp",
                     "/data/log",
                     "/data/logger",
+                    "/data/logs",
+                    "/data/logs/core",
                     "/data/lost+found",
                     "/data/misc",
                     "/data/misc/bluetooth",
@@ -727,31 +729,49 @@ public class FileSystemPermissionTest extends AndroidTestCase {
     private static final Set<File> CHAR_DEV_EXCEPTIONS = new HashSet<File>(
             Arrays.asList(
                 // All exceptions should be alphabetical and associated with a bug number.
+                new File("/dev/adsprpc-smd"), // b/11710243
                 new File("/dev/alarm"),      // b/9035217
                 new File("/dev/ashmem"),
                 new File("/dev/binder"),
+                new File("/dev/felica"),     // b/11142586
+                new File("/dev/felica_ant"), // b/11142586
+                new File("/dev/felica_cen"), // b/11142586
+                new File("/dev/felica_pon"), // b/11142586
+                new File("/dev/felica_rfs"), // b/11142586
+                new File("/dev/felica_rws"), // b/11142586
+                new File("/dev/felica_uicc"), // b/11142586
                 new File("/dev/full"),
                 new File("/dev/genlock"),    // b/9035217
                 new File("/dev/hw_random"),  // b/9191279
                 new File("/dev/ion"),
+                new File("/dev/kgsl-2d0"),   // b/11271533
+                new File("/dev/kgsl-2d1"),   // b/11271533
                 new File("/dev/kgsl-3d0"),   // b/9035217
                 new File("/dev/log/events"), // b/9035217
                 new File("/dev/log/main"),   // b/9035217
                 new File("/dev/log/radio"),  // b/9035217
                 new File("/dev/log/system"), // b/9035217
                 new File("/dev/mali0"),       // b/9106968
+                new File("/dev/mali"),        // b/11142586
                 new File("/dev/msm_rotator"), // b/9035217
                 new File("/dev/null"),
                 new File("/dev/nvhost-ctrl"), // b/9088251
                 new File("/dev/nvhost-gr2d"), // b/9088251
                 new File("/dev/nvhost-gr3d"), // b/9088251
+                new File("/dev/nvhost-tsec"),
                 new File("/dev/nvmap"),       // b/9088251
                 new File("/dev/ptmx"),        // b/9088251
                 new File("/dev/pvrsrvkm"),    // b/9108170
+                new File("/dev/quadd"),
                 new File("/dev/random"),
+                new File("/dev/snfc_cen"),    // b/11142586
+                new File("/dev/snfc_hsel"),   // b/11142586
+                new File("/dev/snfc_intu_poll"), // b/11142586
+                new File("/dev/snfc_rfs"),    // b/11142586
                 new File("/dev/tiler"),       // b/9108170
                 new File("/dev/tty"),
                 new File("/dev/urandom"),
+                new File("/dev/ump"),         // b/11142586
                 new File("/dev/xt_qtaguid"),  // b/9088251
                 new File("/dev/zero"),
                 new File("/dev/fimg2d"),      // b/10428016

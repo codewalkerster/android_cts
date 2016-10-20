@@ -65,6 +65,7 @@ public class SmsManagerTest extends AndroidTestCase {
                     "45006",    // LGT
                     "311660",   // MetroPCS
                     "310120",   // Sprint
+                    "44050",    // KDDI
                     "44053",    // KDDI
                     "44054",    // KDDI
                     "44070",    // KDDI
@@ -74,6 +75,9 @@ public class SmsManagerTest extends AndroidTestCase {
                     "44074",    // KDDI
                     "44075",    // KDDI
                     "44076",    // KDDI
+                    "51502",    // Globe Telecoms
+                    "51503",    // Smart Communications
+                    "51505",    // Sun Cellular
                     "311870",   // Boost Mobile
                     "311220",   // USCC
                     "311225",   // USCC LTE
